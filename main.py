@@ -66,6 +66,9 @@ async def assign_hospital_from_file(
     birth_year_after: Optional[int] = Form(None),
     file: UploadFile = File(...)
 ):
+    if not target_hospital or target_hospital.strip() == "":
+        raise HTTPException(status_code=400, detail="배정 대상 병원 이름을 입력해 주세요.")
+
     try:
         contents = await file.read()
         if file.filename.endswith('.csv'):
@@ -89,7 +92,7 @@ async def assign_hospital_from_file(
                 )
             )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"파일을 읽는 중 오류가 발생했습니다: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"엑셀(CSV) 양식을 확인해 주세요: {str(e)}")
 
     criteria = HospitalCriteria(
         gender=gender_criteria,
@@ -152,6 +155,8 @@ def render_ui():
             select, input { padding: 8px 12px; margin-right: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #cbd5e0; }
             button { background: #3182ce; color: white; border: none; padding: 12px 20px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; }
             button:hover { background: #2b6cb0; }
+            .btn-export { background: #38a169; margin-top: 15px; }
+            .btn-export:hover { background: #2f855a; }
             .table-responsive { overflow-x: auto; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; min-width: 600px; }
             th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; font-size: 13px; }
@@ -162,6 +167,7 @@ def render_ui():
             .rank-badge { background: #d69e2e; color: white; padding: 4px 8px; border-radius: 12px; font-weight: bold; }
             .file-box { border: 2px dashed #cbd5e0; padding: 15px; background: white; border-radius: 6px; margin-bottom: 15px; }
         </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
     <body>
         <div class="container">
@@ -200,6 +206,7 @@ def render_ui():
             <div id="summary_box" style="display:none;" class="panel">
                 <h3>📊 배정 결과 요약</h3>
                 <p id="summary_text"></p>
+                <button class="btn-export" onclick="exportToExcel()">📊 배정 결과 엑셀(Excel) 다운로드</button>
             </div>
             <div class="table-responsive">
                 <table id="result_table" style="display:none;">
@@ -213,7 +220,16 @@ def render_ui():
             </div>
         </div>
         <script>
+            let currentResults = [];
+            let currentTargetHospital = "";
+
             async function runAssignment() {
+                const hospitalName = document.getElementById('hospital_name').value;
+                if (!hospitalName || hospitalName.trim() === '') {
+                    alert('배정 대상 병원 이름을 선택하거나 입력해 주세요!');
+                    return;
+                }
+
                 const fileInput = document.getElementById('excel_file');
                 if (!fileInput.files || fileInput.files.length === 0) {
                     alert('학생 명단 엑셀(CSV) 파일을 먼저 선택해 주세요!');
@@ -221,7 +237,7 @@ def render_ui():
                 }
 
                 const formData = new FormData();
-                formData.append('target_hospital', document.getElementById('hospital_name').value);
+                formData.append('target_hospital', hospitalName);
                 formData.append('gender_criteria', document.getElementById('gender_criteria').value);
                 formData.append('min_gpa', document.getElementById('min_gpa').value);
                 formData.append('birth_year_after', document.getElementById('birth_year').value);
@@ -233,13 +249,16 @@ def render_ui():
                         body: formData
                     });
 
+                    const data = await response.json();
+
                     if (!response.ok) {
-                        const err = await response.json();
-                        alert('오류 발생: ' + err.detail);
+                        alert('오류 발생: ' + (data.detail || '입력 데이터를 확인해 주세요.'));
                         return;
                     }
 
-                    const data = await response.json();
+                    currentResults = data.results;
+                    currentTargetHospital = data.target_hospital;
+
                     document.getElementById('summary_box').style.display = 'block';
                     document.getElementById('summary_text').innerHTML = `<b>대상 병원:</b> ${data.target_hospital} | <b>총 학생:</b> ${data.total_students}명 | <b>적격 배정 대상:</b> <span class="pass">${data.eligible_count}명</span>`;
 
@@ -262,6 +281,33 @@ def render_ui():
                 } catch (e) {
                     alert('서버 통신 오류가 발생했습니다.');
                 }
+            }
+
+            function exportToExcel() {
+                if (!currentResults || currentResults.length === 0) {
+                    alert('다운로드할 배정 결과가 없습니다.');
+                    return;
+                }
+
+                const exportData = currentResults.map(res => ({
+                    "배정 순위": res.rank ? res.rank + "순위" : "-",
+                    "학번": res.student_id,
+                    "이름": res.name,
+                    "성별": res.gender,
+                    "GPA": res.gpa,
+                    "출생연도": res.birth_year,
+                    "이동수단": res.transit_mode,
+                    "소요시간_분": res.travel_time_minutes ? res.travel_time_minutes : "-",
+                    "자격 상태": res.is_eligible ? "적격" : "부적격",
+                    "자격 검증 및 상태 메시지": res.status_note
+                }));
+
+                const worksheet = XLSX.utils.json_to_sheet(exportData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "배정결과");
+
+                const filename = `${currentTargetHospital}_실습배정결과.xlsx`;
+                XLSX.writeFile(workbook, filename);
             }
         </script>
     </body>
