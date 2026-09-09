@@ -11,7 +11,7 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v5.1")
+app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v5.2")
 
 SECRET_PASSWORD = "ansan king"
 
@@ -55,15 +55,9 @@ class SatisfactionMLModel:
 
         self.model.fit(X_train, y_train)
 
-    def predict(self, travel_time: int, transfers: int, walk_time: int, gpa: float, mfi: float) -> Tuple[int, str]:
+    def predict(self, travel_time: int, transfers: int, walk_time: int, gpa: float, mfi: float) -> int:
         base_score = max(30, min(99, int(100 - (mfi * 0.8))))
-        if base_score >= 80:
-            risk = "낮음 (안정)"
-        elif base_score >= 60:
-            risk = "보통"
-        else:
-            risk = "높음 (관심필요)"
-        return base_score, risk
+        return base_score
 
 ml_engine = SatisfactionMLModel()
 
@@ -110,10 +104,8 @@ class AssignmentResult(BaseModel):
     travel_time_minutes: Optional[int]
     fatigue_index: Optional[float]
     ai_satisfaction_score: Optional[int]
-    ai_complaint_risk: Optional[str]
     ai_report: str
     is_eligible: bool
-    status_note: str
 
 class AssignmentResponse(BaseModel):
     status: str
@@ -129,17 +121,17 @@ def calculate_fatigue_index(travel_time: int, transfers: int, walk_time: int) ->
 
 def check_eligibility(student: StudentInput, criteria: HospitalCriteria) -> tuple[bool, str]:
     if criteria.gender == "남성만" and student.gender != "남":
-        return False, "❌ 병원조건 미달 (성별 불일치: 남성만 가능)"
+        return False, "성별 불일치(남성만 가능)"
     elif criteria.gender == "여성만" and student.gender != "여":
-        return False, "❌ 병원조건 미달 (성별 불일치: 여성만 가능)"
+        return False, "성별 불일치(여성만 가능)"
 
     if criteria.min_gpa is not None and student.gpa < criteria.min_gpa:
-        return False, f"❌ 병원조건 미달 (성적 미달: {criteria.min_gpa} 이상 필요)"
+        return False, f"성적 미달({criteria.min_gpa} 이상 필요)"
 
     if criteria.birth_year_after is not None and student.birth_year < criteria.birth_year_after:
-        return False, f"❌ 병원조건 미달 (연령 미달: {criteria.birth_year_after}년 이후 출생자 필요)"
+        return False, f"연령 미달({criteria.birth_year_after}년 이후 출생자 필요)"
 
-    return True, "✅ 자격충족 & MFI 피로도 최적 배정 대상"
+    return True, "자격충족"
 
 @app.post("/api/v1/verify-password")
 async def verify_password(payload: PasswordVerifyRequest):
@@ -223,8 +215,7 @@ async def assign_hospital_from_file(
                     rank=None, student_id=stu.student_id, name=stu.name, gender=stu.gender,
                     gpa=stu.gpa, birth_year=stu.birth_year, nearest_station=stu.nearest_station,
                     transit_mode=stu.transit_mode, travel_time_minutes=None, fatigue_index=None,
-                    ai_satisfaction_score=None, ai_complaint_risk=None, ai_report=ai_rep,
-                    is_eligible=False, status_note=note
+                    ai_satisfaction_score=None, ai_report=ai_rep, is_eligible=False
                 )
             )
 
@@ -243,7 +234,7 @@ async def assign_hospital_from_file(
     for rank_idx, item in enumerate(eligible_list, start=1):
         stu = item["student"]
         
-        sat_score, risk_level = ml_engine.predict(
+        sat_score = ml_engine.predict(
             stu.travel_time_minutes, stu.transfers, stu.walk_time_minutes, stu.gpa, stu.fatigue_index
         )
         
@@ -257,7 +248,7 @@ async def assign_hospital_from_file(
                 gpa=stu.gpa, birth_year=stu.birth_year, nearest_station=stu.nearest_station,
                 transit_mode=stu.transit_mode, travel_time_minutes=stu.travel_time_minutes,
                 fatigue_index=stu.fatigue_index, ai_satisfaction_score=sat_score,
-                ai_complaint_risk=risk_level, ai_report=ai_rep, is_eligible=True, status_note=item["status_note"]
+                ai_report=ai_rep, is_eligible=True
             )
         )
 
@@ -291,15 +282,12 @@ def render_ui():
             .btn-excel:hover { background: linear-gradient(135deg, #047857, #065f46); }
             .dropzone-box { border: 2px dashed #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 24px; text-align: center; }
             .table-custom th { background-color: #0f172a; color: #f8fafc; text-align: center; font-size: 13.5px; font-weight: 600; }
-            .table-custom td { vertical-align: middle; text-align: center; font-size: 13px; }
-            .pass-text { color: #059669; font-weight: 700; }
-            .fail-text { color: #dc2626; font-weight: 700; }
+            .table-custom td { vertical-align: middle; text-align: center; font-size: 13.5px; }
             .rank-badge { background: #d97706; color: white; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 11.5px; }
             .badge-mode { background-color: #f1f5f9; color: #1e40af; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
-            .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: 1px solid #bfdbfe; }
-            .ai-badge { background-color: #ecfdf5; color: #047857; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: 1px solid #a7f3d0; }
+            .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe; }
+            .ai-badge { background-color: #ecfdf5; color: #047857; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #a7f3d0; }
             
-            /* 🌟 모던 프리미엄 Glassmorphism 로그인 오버레이 */
             .auth-overlay {
                 position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
                 background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%);
@@ -313,8 +301,7 @@ def render_ui():
                 border-radius: 24px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-                text-align: center;
-                color: #ffffff;
+                text-align: center; color: #ffffff;
             }
             .auth-icon {
                 width: 64px; height: 64px; background: rgba(59, 130, 246, 0.15);
@@ -331,31 +318,25 @@ def render_ui():
             .auth-input:focus {
                 background: rgba(15, 23, 42, 0.8);
                 border-color: #3b82f6;
-                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
-                outline: none;
+                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25); outline: none;
             }
             .auth-input::placeholder { color: #64748b; font-weight: 400; font-size: 14px; }
             .btn-auth {
                 background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
                 border: none; color: white; font-weight: 700;
                 padding: 14px; border-radius: 12px; font-size: 15px;
-                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
-                transition: all 0.2s ease;
+                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); transition: all 0.2s ease;
             }
-            .btn-auth:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
-            }
+            .btn-auth:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5); }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
     <body>
-        <!-- 🌟 개선된 모던 디자인 세션 인증 모달 -->
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <div class="auth-icon">🚀</div>
                 <h4 class="fw-bold mb-1" style="letter-spacing: -0.5px;">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4" style="color: #94a3b8 !important;">로켓단 AI 실습지 최적 배정 시스템 v5.1</p>
+                <p class="text-secondary fs-7 mb-4" style="color: #94a3b8 !important;">로켓단 AI 실습지 최적 배정 시스템 v5.2</p>
                 <div class="mb-3">
                     <input type="password" id="authPassword" class="form-control auth-input text-center fw-semibold mb-2" placeholder="접속 암호를 입력하세요" onkeyup="if(window.event.keyCode==13){verifyPassword();}">
                     <div id="authError" class="text-danger fs-7 fw-bold mt-2" style="display:none; color: #f87171 !important;">❌ 백엔드 인증 실패: 올바른 암호가 아닙니다.</div>
@@ -371,7 +352,7 @@ def render_ui():
                 <span class="navbar-brand mb-0 h1 fw-bold fs-5" style="letter-spacing: -0.5px;">
                     🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템
                 </span>
-                <span class="badge bg-primary fs-7 px-3 py-2 rounded-pill">v5.1 Pro Engine</span>
+                <span class="badge bg-primary fs-7 px-3 py-2 rounded-pill">v5.2 Refined</span>
             </div>
         </nav>
 
@@ -482,13 +463,12 @@ def render_ui():
                                 <th>배정 순위</th>
                                 <th>학번</th>
                                 <th>이름</th>
+                                <th>성별</th>
                                 <th>GPA</th>
                                 <th>이동수단</th>
                                 <th>소요시간</th>
-                                <th>피로도(MFI)</th>
-                                <th>🤖 AI 예상만족도</th>
-                                <th>이의신청 위험도</th>
-                                <th>자격 검증 메시지</th>
+                                <th>피로도 지수(MFI)</th>
+                                <th>🤖 AI 예상 만족도</th>
                             </tr>
                         </thead>
                         <tbody id="result_body"></tbody>
@@ -619,30 +599,29 @@ def render_ui():
                     currentTargetHospital = data.target_hospital;
 
                     document.getElementById('summary_box').style.display = 'block';
-                    document.getElementById('summary_text').innerHTML = `<b>대상 병원:</b> ${data.target_hospital} &nbsp;|&nbsp; <b>총 학생:</b> ${data.total_students}명 &nbsp;|&nbsp; <b>적격 배정 대상:</b> <span class="pass-text">${data.eligible_count}명</span> &nbsp;|&nbsp; <b>적용 알고리즘:</b> <span class="badge bg-info text-dark">${data.optimization_method}</span>`;
+                    document.getElementById('summary_text').innerHTML = `<b>대상 병원:</b> ${data.target_hospital} &nbsp;|&nbsp; <b>총 학생:</b> ${data.total_students}명 &nbsp;|&nbsp; <b>적격 배정 대상:</b> <span class="pass-text" style="color:#059669; font-weight:bold;">${data.eligible_count}명</span> &nbsp;|&nbsp; <b>적용 알고리즘:</b> <span class="badge bg-info text-dark">${data.optimization_method}</span>`;
 
                     const tbody = document.getElementById('result_body');
                     tbody.innerHTML = '';
                     data.results.forEach(res => {
+                        if (!res.is_eligible) return; // 부적격자는 테이블 목록에서 정갈하게 제외
+                        
                         const row = document.createElement('tr');
                         const rankText = res.rank ? `<span class="rank-badge">${res.rank}순위</span>` : '-';
-                        const statusClass = res.is_eligible ? 'pass-text' : 'fail-text';
                         const timeText = res.travel_time_minutes ? `${res.travel_time_minutes}분` : '-';
-                        const mfiText = res.fatigue_index ? `<span class="mfi-badge">${res.fatigue_index}</span>` : '-';
+                        const mfiText = res.fatigue_index ? `<span class="mfi-badge">${res.fatigue_index} MFI</span>` : '-';
                         const aiSatText = res.ai_satisfaction_score ? `<span class="ai-badge">${res.ai_satisfaction_score}점</span>` : '-';
-                        const riskText = res.ai_complaint_risk ? res.ai_complaint_risk : '-';
 
                         row.innerHTML = `
                             <td>${rankText}</td>
                             <td>${res.student_id}</td>
                             <td><b>${res.name}</b></td>
+                            <td>${res.gender}</td>
                             <td>${res.gpa}</td>
                             <td><span class="badge-mode">${res.transit_mode}</span></td>
                             <td><b>${timeText}</b></td>
                             <td>${mfiText}</td>
                             <td>${aiSatText}</td>
-                            <td><b>${riskText}</b></td>
-                            <td class="${statusClass}">${res.status_note}</td>
                         `;
                         tbody.appendChild(row);
                     });
@@ -658,7 +637,7 @@ def render_ui():
                     return;
                 }
 
-                const exportData = currentResults.map(res => ({
+                const exportData = currentResults.filter(res => res.is_eligible).map(res => ({
                     "배정 순위": res.rank ? res.rank + "순위" : "-",
                     "학번": res.student_id,
                     "이름": res.name,
@@ -669,10 +648,7 @@ def render_ui():
                     "소요시간_분": res.travel_time_minutes ? res.travel_time_minutes : "-",
                     "피로도 지수(MFI)": res.fatigue_index ? res.fatigue_index : "-",
                     "🤖 AI_예상만족도": res.ai_satisfaction_score ? res.ai_satisfaction_score + "점" : "-",
-                    "이의신청_위험도": res.ai_complaint_risk ? res.ai_complaint_risk : "-",
-                    "🧠 AI_배정사유_리포트": res.ai_report,
-                    "자격 상태": res.is_eligible ? "적격" : "부적격",
-                    "자격 검증 메시지": res.status_note
+                    "🧠 AI_배정사유_리포트": res.ai_report
                 }));
 
                 const worksheet = XLSX.utils.json_to_sheet(exportData);
