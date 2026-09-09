@@ -188,17 +188,35 @@ def render_ui():
                         </div>
                         <div class="card-body p-4">
                             <div class="mb-3">
-                                <label class="form-label fw-bold">배정 대상 병원 선택</label>
+                                <label class="form-label fw-bold">배정 대상 병원 선택 (2026학년도 안산대 지정 실습지)</label>
                                 <input type="text" id="hospital_name" list="hospital_list" class="form-select" placeholder="병원 검색 또는 직접 입력..." value="고려대학교 안산병원">
                                 <datalist id="hospital_list">
-                                    <option value="고려대학교 안산병원">
+                                    <option value="중앙대학교 광명병원">
                                     <option value="가톨릭대학교 부천성모병원">
                                     <option value="가톨릭대학교 성빈센트병원">
-                                    <option value="순천향대학교 서울병원">
+                                    <option value="고려대학교 안산병원">
                                     <option value="순천향대학교 부천병원">
-                                    <option value="인하대학교병원">
+                                    <option value="순천향대학교 서울병원">
+                                    <option value="연세대학교 용인세브란스병원">
+                                    <option value="인천기독병원">
                                     <option value="한림대학교 성심병원">
-                                    <option value="중앙대학교 광명병원">
+                                    <option value="인하대병원">
+                                    <option value="한림대학교 동탄성심병원">
+                                    <option value="봄빛병원">
+                                    <option value="우성병원">
+                                    <option value="지샘병원">
+                                    <option value="한빛병원">
+                                    <option value="아주대학교 병원">
+                                    <option value="아이원병원">
+                                    <option value="웰봄병원">
+                                    <option value="단원병원">
+                                    <option value="서울어린이 병원">
+                                    <option value="안산시 정신건강복지센터">
+                                    <option value="안산시 중독관리통합지원센터">
+                                    <option value="이음병원">
+                                    <option value="군포시 정신건강복지센터">
+                                    <option value="의왕시 정신건강복지센터">
+                                    <option value="계요병원">
                                 </datalist>
                             </div>
                             <div class="row g-2 mb-3">
