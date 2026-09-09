@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -6,7 +6,13 @@ import pandas as pd
 import io
 import uvicorn
 
-app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템")
+app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v3.0")
+
+# 비밀번호 설정 (백엔드 세션 보안)
+SECRET_PASSWORD = "ansan king"
+
+class PasswordVerifyRequest(BaseModel):
+    password: str
 
 class HospitalCriteria(BaseModel):
     gender: str = Field(default="무관")
@@ -22,7 +28,10 @@ class StudentInput(BaseModel):
     address: str
     nearest_station: str
     travel_time_minutes: int
+    transfers: int
+    walk_time_minutes: int
     transit_mode: str
+    fatigue_index: float
 
 class AssignmentResult(BaseModel):
     rank: Optional[int]
@@ -34,6 +43,7 @@ class AssignmentResult(BaseModel):
     nearest_station: str
     transit_mode: str
     travel_time_minutes: Optional[int]
+    fatigue_index: Optional[float]
     is_eligible: bool
     status_note: str
 
@@ -43,6 +53,12 @@ class AssignmentResponse(BaseModel):
     total_students: int
     eligible_count: int
     results: List[AssignmentResult]
+
+# 다변수 피로도 지수 (Multi-factor Fatigue Index) 계산 알고리즘
+def calculate_fatigue_index(travel_time: int, transfers: int, walk_time: int) -> float:
+    # 공식: 총 소요시간 + (환승 횟수 * 12분 피로도 가중치) + (도보시간 * 1.2 가중치)
+    mfi = travel_time + (transfers * 12.0) + (walk_time * 1.2)
+    return round(mfi, 1)
 
 def check_eligibility(student: StudentInput, criteria: HospitalCriteria) -> tuple[bool, str]:
     if criteria.gender == "남성만" and student.gender != "남":
@@ -56,7 +72,13 @@ def check_eligibility(student: StudentInput, criteria: HospitalCriteria) -> tupl
     if criteria.birth_year_after is not None and student.birth_year < criteria.birth_year_after:
         return False, f"❌ 병원조건 미달 (연령 미달: {criteria.birth_year_after}년 이후 출생자 필요)"
 
-    return True, "✅ 조건충족 & 최단거리 배정 대상"
+    return True, "✅ 자격충족 & MFI 피로도 최적 배정 대상"
+
+@app.post("/api/v1/verify-password")
+async def verify_password(payload: PasswordVerifyRequest):
+    if payload.password == SECRET_PASSWORD:
+        return {"status": "success", "message": "인증 성공"}
+    raise HTTPException(status_code=401, detail="비밀번호가 올바르지 않습니다.")
 
 @app.post("/api/v1/assign-file", response_model=AssignmentResponse)
 async def assign_hospital_from_file(
@@ -81,12 +103,20 @@ async def assign_hospital_from_file(
             mode_raw = str(row.get('이동수단', '대중교통'))
             station_info = str(row.get('인근역', ''))
             
-            if '버스' in mode_raw:
+            # 이동시간 및 파라미터 추출 (기본값 설정)
+            travel_time = int(row['소요시간_분'])
+            transfers = int(row.get('환승횟수', 1 if '버스' in mode_raw and station_info != '' else 0))
+            walk_time = int(row.get('도보시간_분', 8))
+            
+            # 다변수 피로도 지수 (MFI) 산출
+            mfi = calculate_fatigue_index(travel_time, transfers, walk_time)
+
+            if '버스' in mode_raw and ('전철' in mode_raw or '지하철' in mode_raw):
+                detail_mode = '지하철+버스'
+            elif '버스' in mode_raw:
                 detail_mode = '시내/시외버스'
-            elif '전철' in mode_raw or '지하철' in mode_raw or station_info != '':
-                detail_mode = '지하철(전철)'
             else:
-                detail_mode = '대중교통(버스/전철)'
+                detail_mode = '지하철(전철)'
 
             students.append(
                 StudentInput(
@@ -97,8 +127,11 @@ async def assign_hospital_from_file(
                     birth_year=int(row['출생연도']),
                     address=str(row.get('주소', '')),
                     nearest_station=station_info,
-                    travel_time_minutes=int(row['소요시간_분']),
-                    transit_mode=detail_mode
+                    travel_time_minutes=travel_time,
+                    transfers=transfers,
+                    walk_time_minutes=walk_time,
+                    transit_mode=detail_mode,
+                    fatigue_index=mfi
                 )
             )
     except Exception as e:
@@ -122,11 +155,13 @@ async def assign_hospital_from_file(
                 AssignmentResult(
                     rank=None, student_id=stu.student_id, name=stu.name, gender=stu.gender,
                     gpa=stu.gpa, birth_year=stu.birth_year, nearest_station=stu.nearest_station,
-                    transit_mode=stu.transit_mode, travel_time_minutes=None, is_eligible=False, status_note=note
+                    transit_mode=stu.transit_mode, travel_time_minutes=None, fatigue_index=None,
+                    is_eligible=False, status_note=note
                 )
             )
 
-    eligible_list.sort(key=lambda x: x["student"].travel_time_minutes)
+    # 🌟 핵심 알고리즘: 소요시간 단일 정렬이 아닌 다변수 피로도 지수(MFI) 기준 최적 정렬
+    eligible_list.sort(key=lambda x: x["student"].fatigue_index)
 
     final_results = []
     for rank_idx, item in enumerate(eligible_list, start=1):
@@ -136,7 +171,7 @@ async def assign_hospital_from_file(
                 rank=rank_idx, student_id=stu.student_id, name=stu.name, gender=stu.gender,
                 gpa=stu.gpa, birth_year=stu.birth_year, nearest_station=stu.nearest_station,
                 transit_mode=stu.transit_mode, travel_time_minutes=stu.travel_time_minutes,
-                is_eligible=True, status_note=item["status_note"]
+                fatigue_index=stu.fatigue_index, is_eligible=True, status_note=item["status_note"]
             )
         )
 
@@ -175,26 +210,27 @@ def render_ui():
             .fail-text { color: #e53e3e; font-weight: bold; }
             .rank-badge { background-color: #d69e2e; color: white; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
             .badge-mode { background-color: #e2e8f0; color: #2b6cb0; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
+            .mfi-badge { background-color: #ebf8ff; color: #2c5282; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: 1px solid #bee3f8; }
             
-            /* 보안 인증 모달 스타일 */
-            .auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(26, 54, 93, 0.95); z-index: 9999; display: flex; justify-content: center; align-items: center; }
-            .auth-card { background: white; width: 90%; max-width: 420px; padding: 35px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; }
+            /* 백엔드 연동 보안 인증 레이어 */
+            .auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(26, 54, 93, 0.96); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+            .auth-card { background: white; width: 90%; max-width: 420px; padding: 35px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); text-align: center; }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
     <body>
-        <!-- 보안 인증 암호 레이어 -->
+        <!-- 서버 인증 모달 -->
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <div class="fs-1 mb-2">🔒</div>
-                <h4 class="fw-bold text-navy mb-1">시스템 접속 인증</h4>
+                <h4 class="fw-bold text-navy mb-1">시스템 서버 인증</h4>
                 <p class="text-muted fs-7 mb-4">개인정보 보호를 위해 관리자 암호를 입력해 주세요.</p>
                 <div class="mb-3">
                     <input type="password" id="authPassword" class="form-control form-control-lg text-center fw-bold" placeholder="접속 암호 입력..." onkeyup="if(window.event.keyCode==13){verifyPassword();}">
-                    <div id="authError" class="text-danger fs-7 mt-2 fw-bold" style="display:none;">❌ 암호가 올바르지 않습니다.</div>
+                    <div id="authError" class="text-danger fs-7 mt-2 fw-bold" style="display:none;">❌ 백엔드 인증 실패: 암호가 올바르지 않습니다.</div>
                 </div>
-                <button onclick="verifyPassword()" class="btn btn-primary-custom text-white w-100 btn-lg fw-bold" style="background-color: #2b6cb0;">
-                    인증 및 시스템 접속
+                <button onclick="verifyPassword()" class="btn text-white w-100 btn-lg fw-bold" style="background-color: #2b6cb0;">
+                    백엔드 인증 및 시스템 접속
                 </button>
             </div>
         </div>
@@ -205,7 +241,7 @@ def render_ui():
                 <span class="navbar-brand mb-0 h1 fw-bold fs-5">
                     🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템
                 </span>
-                <span class="badge bg-secondary fs-7">v2.2 Protected</span>
+                <span class="badge bg-success fs-7">v3.0 Multi-Factor AI Engine</span>
             </div>
         </nav>
 
@@ -231,7 +267,7 @@ def render_ui():
                                 </select>
                             </div>
 
-                            <!-- 2. 배정 대상 병원 드롭다운 선택 -->
+                            <!-- 2. 배정 대상 병원 선택 -->
                             <div class="mb-3">
                                 <label class="form-label fw-bold">2. 배정 대상 병원 선택</label>
                                 <select id="hospital_select" class="form-select fw-bold">
@@ -288,7 +324,7 @@ def render_ui():
                                 <input type="file" id="excel_file" class="form-control" accept=".csv, .xlsx, .xls">
                             </div>
                             <button onclick="runAssignment()" class="btn btn-run text-white w-100 shadow-sm">
-                                🚀 실시간 최적 배정 실행하기
+                                🚀 AI 피로도 지수(MFI) 기반 최적 배정 실행
                             </button>
                         </div>
                     </div>
@@ -299,7 +335,7 @@ def render_ui():
             <div id="summary_box" style="display:none;" class="card card-custom mb-4 border-start border-4 border-primary">
                 <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
-                        <h5 class="fw-bold text-navy mb-2">📊 배정 결과 요약</h5>
+                        <h5 class="fw-bold text-navy mb-2">📊 AI 배정 결과 요약</h5>
                         <p id="summary_text" class="mb-0 fs-6"></p>
                     </div>
                     <button class="btn btn-excel text-white px-4 py-2 shadow-sm" onclick="exportToExcel()">
@@ -319,8 +355,9 @@ def render_ui():
                                 <th>이름</th>
                                 <th>성별</th>
                                 <th>GPA</th>
-                                <th>이동수단 세부구분</th>
+                                <th>이동수단</th>
                                 <th>소요시간</th>
+                                <th>피로도 지수 (MFI)</th>
                                 <th>자격 검증 및 상태 메시지</th>
                             </tr>
                         </thead>
@@ -332,18 +369,27 @@ def render_ui():
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-            // 암호 검증 함수 (ansan king)
-            function verifyPassword() {
+            // 서버 기반 패스워드 인증 함수
+            async function verifyPassword() {
                 const pwd = document.getElementById('authPassword').value;
-                if (pwd === 'ansan king') {
-                    document.getElementById('authOverlay').style.display = 'none';
-                    sessionStorage.setItem('authenticated', 'true');
-                } else {
-                    document.getElementById('authError').style.display = 'block';
+                try {
+                    const response = await fetch('/api/v1/verify-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: pwd })
+                    });
+                    
+                    if (response.ok) {
+                        document.getElementById('authOverlay').style.display = 'none';
+                        sessionStorage.setItem('authenticated', 'true');
+                    } else {
+                        document.getElementById('authError').style.display = 'block';
+                    }
+                } catch(e) {
+                    alert('서버 인증 연결 실패');
                 }
             }
 
-            // 세션 유지 확인
             if (sessionStorage.getItem('authenticated') === 'true') {
                 document.getElementById('authOverlay').style.display = 'none';
             }
@@ -452,6 +498,7 @@ def render_ui():
                         const rankText = res.rank ? `<span class="rank-badge">${res.rank}순위</span>` : '-';
                         const statusClass = res.is_eligible ? 'pass-text' : 'fail-text';
                         const timeText = res.travel_time_minutes ? `${res.travel_time_minutes}분` : '-';
+                        const mfiText = res.fatigue_index ? `<span class="mfi-badge">${res.fatigue_index} MFI</span>` : '-';
 
                         row.innerHTML = `
                             <td>${rankText}</td>
@@ -461,6 +508,7 @@ def render_ui():
                             <td>${res.gpa}</td>
                             <td><span class="badge-mode">${res.transit_mode}</span></td>
                             <td><b>${timeText}</b></td>
+                            <td>${mfiText}</td>
                             <td class="${statusClass}">${res.status_note}</td>
                         `;
                         tbody.appendChild(row);
@@ -486,6 +534,7 @@ def render_ui():
                     "출생연도": res.birth_year,
                     "이동수단 구분": res.transit_mode,
                     "소요시간_분": res.travel_time_minutes ? res.travel_time_minutes : "-",
+                    "피로도 지수(MFI)": res.fatigue_index ? res.fatigue_index : "-",
                     "자격 상태": res.is_eligible ? "적격" : "부적격",
                     "자격 검증 및 상태 메시지": res.status_note
                 }));
