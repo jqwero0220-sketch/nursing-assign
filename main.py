@@ -11,7 +11,7 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v5.2")
+app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v5.3")
 
 SECRET_PASSWORD = "ansan king"
 
@@ -285,9 +285,22 @@ def render_ui():
             .table-custom td { vertical-align: middle; text-align: center; font-size: 13.5px; }
             .rank-badge { background: #d97706; color: white; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 11.5px; }
             .badge-mode { background-color: #f1f5f9; color: #1e40af; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
-            .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe; }
+            .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe; cursor: help; }
             .ai-badge { background-color: #ecfdf5; color: #047857; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #a7f3d0; }
             
+            /* 툴팁 아이콘 스타일 */
+            .info-icon {
+                display: inline-flex; align-items: center; justify-content: center;
+                width: 16px; height: 16px; border-radius: 50%; background-color: #3b82f6;
+                color: white; font-size: 10px; font-weight: bold; margin-left: 4px;
+                cursor: pointer; vertical-align: middle;
+            }
+            .tooltip-inner {
+                max-width: 320px; text-align: left; font-size: 12px; padding: 10px 14px;
+                background-color: #0f172a; line-height: 1.5; border-radius: 8px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            }
+
             .auth-overlay {
                 position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
                 background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%);
@@ -336,7 +349,7 @@ def render_ui():
             <div class="auth-card">
                 <div class="auth-icon">🚀</div>
                 <h4 class="fw-bold mb-1" style="letter-spacing: -0.5px;">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4" style="color: #94a3b8 !important;">로켓단 AI 실습지 최적 배정 시스템 v5.2</p>
+                <p class="text-secondary fs-7 mb-4" style="color: #94a3b8 !important;">로켓단 AI 실습지 최적 배정 시스템 v5.3</p>
                 <div class="mb-3">
                     <input type="password" id="authPassword" class="form-control auth-input text-center fw-semibold mb-2" placeholder="접속 암호를 입력하세요" onkeyup="if(window.event.keyCode==13){verifyPassword();}">
                     <div id="authError" class="text-danger fs-7 fw-bold mt-2" style="display:none; color: #f87171 !important;">❌ 백엔드 인증 실패: 올바른 암호가 아닙니다.</div>
@@ -352,7 +365,7 @@ def render_ui():
                 <span class="navbar-brand mb-0 h1 fw-bold fs-5" style="letter-spacing: -0.5px;">
                     🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템
                 </span>
-                <span class="badge bg-primary fs-7 px-3 py-2 rounded-pill">v5.2 Refined</span>
+                <span class="badge bg-primary fs-7 px-3 py-2 rounded-pill">v5.3 UX Smart</span>
             </div>
         </nav>
 
@@ -410,11 +423,12 @@ def render_ui():
                                                     <input type="number" id="birth_year" class="form-control form-control-sm" placeholder="예: 2003년 이후">
                                                 </div>
                                             </div>
-                                            <div class="form-check mt-2">
-                                                <input class="form-check-input" type="checkbox" id="use_hungarian">
-                                                <label class="form-check-label fs-7 fw-bold text-dark" for="use_hungarian">
+                                            <div class="form-check mt-2 d-flex align-items-center">
+                                                <input class="form-check-input me-2" type="checkbox" id="use_hungarian">
+                                                <label class="form-check-label fs-7 fw-bold text-dark mb-0" for="use_hungarian">
                                                     🔬 SciPy 헝가리안 글로벌 최적 매칭 알고리즘 적용
                                                 </label>
+                                                <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="<b>[헝가리안 알고리즘]</b><br>단순 개별 순위 정렬이 아닌, 학년 전체 학생들의 MFI 피로도 합(Total Cost)을 수학적으로 최소화하는 선형 계획법 최적 매칭 연산 방식입니다.">?</span>
                                             </div>
                                         </div>
                                     </div>
@@ -467,7 +481,10 @@ def render_ui():
                                 <th>GPA</th>
                                 <th>이동수단</th>
                                 <th>소요시간</th>
-                                <th>피로도 지수(MFI)</th>
+                                <th>
+                                    피로도 지수(MFI)
+                                    <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="<b>[MFI 피로도 지수 공식 & 근거]</b><br>MFI = 소요시간(분) + (환승횟수 × 12) + (도보시간 × 1.2)<br>간호대생 통학 피로도 특성을 고려하여 환승 대기시간과 도보시간에 체감 가중치를 부여한 산출 수식입니다. 지수가 낮을수록 우수합니다.">?</span>
+                                </th>
                                 <th>🤖 AI 예상 만족도</th>
                             </tr>
                         </thead>
@@ -479,6 +496,14 @@ def render_ui():
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         <script>
+            // Bootstrap Tooltip 전체 초기화 함수
+            function initTooltips() {
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+
             async function verifyPassword() {
                 const pwd = document.getElementById('authPassword').value;
                 try {
@@ -552,6 +577,7 @@ def render_ui():
 
             window.onload = function() {
                 updateHospitalOptions();
+                initTooltips();
             };
 
             let currentResults = [];
@@ -599,12 +625,12 @@ def render_ui():
                     currentTargetHospital = data.target_hospital;
 
                     document.getElementById('summary_box').style.display = 'block';
-                    document.getElementById('summary_text').innerHTML = `<b>대상 병원:</b> ${data.target_hospital} &nbsp;|&nbsp; <b>총 학생:</b> ${data.total_students}명 &nbsp;|&nbsp; <b>적격 배정 대상:</b> <span class="pass-text" style="color:#059669; font-weight:bold;">${data.eligible_count}명</span> &nbsp;|&nbsp; <b>적용 알고리즘:</b> <span class="badge bg-info text-dark">${data.optimization_method}</span>`;
+                    document.getElementById('summary_text').innerHTML = `<b>대상 병원:</b> ${data.target_hospital} &nbsp;|&nbsp; <b>총 학생:</b> ${data.total_students}명 &nbsp;|&nbsp; <b>적격 배정 대상:</b> <span class="pass-text" style="color:#059669; font-weight:bold;">${data.eligible_count}명</span> &nbsp;|&nbsp; <b>적용 알고리즘:</b> <span class="badge bg-info text-dark" data-bs-toggle="tooltip" title="선택된 배정 알고리즘 엔진입니다.">${data.optimization_method}</span>`;
 
                     const tbody = document.getElementById('result_body');
                     tbody.innerHTML = '';
                     data.results.forEach(res => {
-                        if (!res.is_eligible) return; // 부적격자는 테이블 목록에서 정갈하게 제외
+                        if (!res.is_eligible) return;
                         
                         const row = document.createElement('tr');
                         const rankText = res.rank ? `<span class="rank-badge">${res.rank}순위</span>` : '-';
@@ -626,6 +652,7 @@ def render_ui():
                         tbody.appendChild(row);
                     });
                     document.getElementById('result_table').style.display = 'table';
+                    initTooltips(); // 새로 추가된 요약바 툴팁 반영
                 } catch (e) {
                     alert('서버 통신 오류가 발생했습니다.');
                 }
@@ -653,7 +680,7 @@ def render_ui():
 
                 const worksheet = XLSX.utils.json_to_sheet(exportData);
                 const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "AI배정결과리포트");
+                XLSX.utils.book_append_sheet(worksheet, worksheet, "AI배정결과리포트");
 
                 const filename = `${currentTargetHospital}_AI실습배정결과.xlsx`;
                 XLSX.writeFile(workbook, filename);
