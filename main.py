@@ -146,79 +146,137 @@ def render_ui():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>로켓단 AI 실습지 최적 배정 시스템</title>
+        <!-- Bootstrap 5 CDN & Google Fonts -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
         <style>
-            body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; margin: 15px; }
-            .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-            h1 { color: #1a365d; border-bottom: 3px solid #2b6cb0; padding-bottom: 10px; font-size: 20px; }
-            .panel { background: #edf2f7; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-            label { font-weight: bold; margin-right: 10px; display: inline-block; margin-top: 5px; }
-            select, input { padding: 8px 12px; margin-right: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #cbd5e0; }
-            button { background: #3182ce; color: white; border: none; padding: 12px 20px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; }
-            button:hover { background: #2b6cb0; }
-            .btn-export { background: #38a169; margin-top: 15px; }
-            .btn-export:hover { background: #2f855a; }
-            .table-responsive { overflow-x: auto; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; min-width: 600px; }
-            th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; font-size: 13px; }
-            th { background: #2b6cb0; color: white; }
-            tr:nth-child(even) { background: #f7fafc; }
-            .pass { color: #2f855a; font-weight: bold; }
-            .fail { color: #e53e3e; font-weight: bold; }
-            .rank-badge { background: #d69e2e; color: white; padding: 4px 8px; border-radius: 12px; font-weight: bold; }
-            .file-box { border: 2px dashed #cbd5e0; padding: 15px; background: white; border-radius: 6px; margin-bottom: 15px; }
+            body { font-family: 'Pretendard', sans-serif; background-color: #f7fafc; color: #2d3748; }
+            .navbar-custom { background-color: #1a365d; }
+            .card-custom { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+            .card-header-custom { background: #edf2f7; border-bottom: 2px solid #e2e8f0; font-weight: 700; color: #1a365d; border-radius: 12px 12px 0 0 !important; }
+            .btn-run { background-color: #2b6cb0; border: none; font-weight: 700; padding: 12px; font-size: 16px; border-radius: 8px; }
+            .btn-run:hover { background-color: #1a365d; }
+            .btn-excel { background-color: #2f855a; border: none; font-weight: 700; }
+            .btn-excel:hover { background-color: #22543d; }
+            .dropzone-box { border: 2px dashed #cbd5e0; background: #ffffff; border-radius: 8px; padding: 20px; text-align: center; }
+            .table-custom th { background-color: #1a365d; color: white; text-align: center; font-size: 14px; }
+            .table-custom td { vertical-align: middle; text-align: center; font-size: 13.5px; }
+            .pass-text { color: #2f855a; font-weight: bold; }
+            .fail-text { color: #e53e3e; font-weight: bold; }
+            .rank-badge { background-color: #d69e2e; color: white; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
     <body>
-        <div class="container">
-            <h1>🏥 로켓단 AI 실습지 최적 배정 대시보드</h1>
-            <div class="panel">
-                <h3>📌 병원 자격 조건 설정</h3>
-                <label>배정 대상 병원:</label>
-                <input type="text" id="hospital_name" list="hospital_list" placeholder="병원 검색 또는 선택..." value="고려대학교 안산병원" style="width: 250px;">
-                <datalist id="hospital_list">
-                    <option value="고려대학교 안산병원">
-                    <option value="가톨릭대학교 부천성모병원">
-                    <option value="서울대학교병원">
-                    <option value="분당서울대학교병원">
-                    <option value="서울아산병원">
-                    <option value="삼성서울병원">
-                    <option value="연세대학교 세브란스병원">
-                </datalist><br>
-                <label>성별 조건:</label>
-                <select id="gender_criteria">
-                    <option value="남성만" selected>남성만</option>
-                    <option value="여성만">여성만</option>
-                    <option value="무관">무관</option>
-                </select>
-                <label>최소 GPA:</label>
-                <input type="number" step="0.1" id="min_gpa" value="3.5">
-                <label>출생연도 조건:</label>
-                <input type="number" id="birth_year" value="2003"> 이후 출생자<br><br>
+        <!-- Header Navbar -->
+        <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
+            <div class="container px-4">
+                <span class="navbar-brand mb-0 h1 fw-bold fs-5">
+                    🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템
+                </span>
+                <span class="badge bg-secondary fs-7">v2.0 Web Dashboard</span>
+            </div>
+        </nav>
 
-                <div class="file-box">
-                    <h3>📁 학생 명단 엑셀(CSV/XLSX) 파일 업로드</h3>
-                    <input type="file" id="excel_file" accept=".csv, .xlsx, .xls">
+        <div class="container pb-5" style="max-width: 1080px;">
+            <div class="row g-4 mb-4">
+                <!-- STEP 1: 조건 설정 -->
+                <div class="col-md-6">
+                    <div class="card card-custom h-100">
+                        <div class="card-header card-header-custom py-3 px-4 fs-6">
+                            📌 STEP 1. 병원 자격 조건 설정
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">배정 대상 병원 선택</label>
+                                <input type="text" id="hospital_name" list="hospital_list" class="form-select" placeholder="병원 검색 또는 직접 입력..." value="고려대학교 안산병원">
+                                <datalist id="hospital_list">
+                                    <option value="고려대학교 안산병원">
+                                    <option value="가톨릭대학교 부천성모병원">
+                                    <option value="가톨릭대학교 성빈센트병원">
+                                    <option value="순천향대학교 서울병원">
+                                    <option value="순천향대학교 부천병원">
+                                    <option value="인하대학교병원">
+                                    <option value="한림대학교 성심병원">
+                                    <option value="중앙대학교 광명병원">
+                                </datalist>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">성별 조건</label>
+                                    <select id="gender_criteria" class="form-select">
+                                        <option value="무관" selected>무관</option>
+                                        <option value="남성만">남성만</option>
+                                        <option value="여성만">여성만</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">최소 GPA</label>
+                                    <input type="number" step="0.1" id="min_gpa" class="form-control" value="3.5">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">출생연도 조건</label>
+                                    <input type="number" id="birth_year" class="form-control" value="2003" placeholder="2003년 이후">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <button onclick="runAssignment()">🚀 파일 업로드 및 실시간 배정 실행</button>
+                <!-- STEP 2: 파일 업로드 -->
+                <div class="col-md-6">
+                    <div class="card card-custom h-100">
+                        <div class="card-header card-header-custom py-3 px-4 fs-6">
+                            📁 STEP 2. 학생 명단 파일 업로드
+                        </div>
+                        <div class="card-body p-4 d-flex flex-column justify-content-between">
+                            <div class="dropzone-box mb-3">
+                                <p class="fw-bold mb-2 text-dark">학생 명단 엑셀(.xlsx / .csv) 선택</p>
+                                <input type="file" id="excel_file" class="form-control" accept=".csv, .xlsx, .xls">
+                            </div>
+                            <button onclick="runAssignment()" class="btn btn-run text-white w-100 shadow-sm">
+                                🚀 실시간 최적 배정 실행하기
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="summary_box" style="display:none;" class="panel">
-                <h3>📊 배정 결과 요약</h3>
-                <p id="summary_text"></p>
-                <button class="btn-export" onclick="exportToExcel()">📊 배정 결과 엑셀(Excel) 다운로드</button>
+
+            <!-- 요약 박스 -->
+            <div id="summary_box" style="display:none;" class="card card-custom mb-4 border-start border-4 border-primary">
+                <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h5 class="fw-bold text-navy mb-2">📊 배정 결과 요약</h5>
+                        <p id="summary_text" class="mb-0 fs-6"></p>
+                    </div>
+                    <button class="btn btn-excel text-white px-4 py-2 shadow-sm" onclick="exportToExcel()">
+                        📥 결과 엑셀(Excel) 다운로드
+                    </button>
+                </div>
             </div>
-            <div class="table-responsive">
-                <table id="result_table" style="display:none;">
-                    <thead>
-                        <tr>
-                            <th>배정 순위</th><th>학번</th><th>이름</th><th>성별</th><th>GPA</th><th>거주지 이동수단</th><th>소요시간</th><th>자격 검증 및 상태 메시지</th>
-                        </tr>
-                    </thead>
-                    <tbody id="result_body"></tbody>
-                </table>
+
+            <!-- 결과 테이블 -->
+            <div class="card card-custom">
+                <div class="table-responsive">
+                    <table id="result_table" class="table table-hover table-custom mb-0" style="display:none;">
+                        <thead>
+                            <tr>
+                                <th>배정 순위</th>
+                                <th>학번</th>
+                                <th>이름</th>
+                                <th>성별</th>
+                                <th>GPA</th>
+                                <th>이동수단</th>
+                                <th>소요시간</th>
+                                <th>자격 검증 및 상태 메시지</th>
+                            </tr>
+                        </thead>
+                        <tbody id="result_body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
+
         <script>
             let currentResults = [];
             let currentTargetHospital = "";
@@ -260,20 +318,25 @@ def render_ui():
                     currentTargetHospital = data.target_hospital;
 
                     document.getElementById('summary_box').style.display = 'block';
-                    document.getElementById('summary_text').innerHTML = `<b>대상 병원:</b> ${data.target_hospital} | <b>총 학생:</b> ${data.total_students}명 | <b>적격 배정 대상:</b> <span class="pass">${data.eligible_count}명</span>`;
+                    document.getElementById('summary_text').innerHTML = `<b>대상 병원:</b> ${data.target_hospital} &nbsp;|&nbsp; <b>총 학생:</b> ${data.total_students}명 &nbsp;|&nbsp; <b>적격 배정 대상:</b> <span class="pass-text">${data.eligible_count}명</span>`;
 
                     const tbody = document.getElementById('result_body');
                     tbody.innerHTML = '';
                     data.results.forEach(res => {
                         const row = document.createElement('tr');
                         const rankText = res.rank ? `<span class="rank-badge">${res.rank}순위</span>` : '-';
-                        const statusClass = res.is_eligible ? 'pass' : 'fail';
+                        const statusClass = res.is_eligible ? 'pass-text' : 'fail-text';
                         const timeText = res.travel_time_minutes ? `${res.travel_time_minutes}분` : '-';
 
                         row.innerHTML = `
-                            <td>${rankText}</td><td>${res.student_id}</td><td><b>${res.name}</b></td>
-                            <td>${res.gender}</td><td>${res.gpa}</td><td>${res.transit_mode}</td>
-                            <td><b>${timeText}</b></td><td class="${statusClass}">${res.status_note}</td>
+                            <td>${rankText}</td>
+                            <td>${res.student_id}</td>
+                            <td><b>${res.name}</b></td>
+                            <td>${res.gender}</td>
+                            <td>${res.gpa}</td>
+                            <td>${res.transit_mode}</td>
+                            <td><b>${timeText}</b></td>
+                            <td class="${statusClass}">${res.status_note}</td>
                         `;
                         tbody.appendChild(row);
                     });
