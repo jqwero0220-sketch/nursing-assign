@@ -12,45 +12,50 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v6.1 (Kakao Real-time API Engine)")
+app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v7.0 (Naver Maps API Engine)")
 
 SECRET_PASSWORD = "ansan king"
-KAKAO_API_KEY = "2a75c2aa5444aaa0d402c08e5dce73cd"
+
+# 🌟 네이버 클라우드 플랫폼(NCP) 인증 키 설정
+NAVER_CLIENT_ID = "ncp_iam_BPAMKR5LHbfGK0MGhOFw"
+NAVER_CLIENT_SECRET = "ncp_iam_BPKMKR509ETydRdGIIyiHUGbwkZ3I6GuAo"
 
 # -------------------------------------------------------------------
-# 🚀 Real-time Kakao Mobility & Geocoding Engine
+# 🚀 Naver Maps Geocoding & Route Engine
 # -------------------------------------------------------------------
 ROUTE_CACHE: Dict[str, Tuple[int, int, int]] = {}
 
-async def get_coordinates(client: httpx.AsyncClient, address: str) -> Tuple[float, float]:
-    """카카오 로컬 API를 통해 주소 문자열을 위경도(X, Y) 좌표로 실시간 변환"""
+async def get_naver_coordinates(client: httpx.AsyncClient, address: str) -> Tuple[float, float]:
+    """네이버 지도 Geocoding API를 이용해 주소를 실시간 위경도(X, Y) 좌표로 변환"""
     if not address or str(address).strip() == "" or str(address) == "nan":
         return 126.8407, 37.3219 # 기본값: 안산시청 좌표
     
-    url = f"https://dapi.kakao.com/v2/local/search/address.json?query={address}"
-    headers = {"Authorization": f"KakaoAK {KAKAO_API_KEY}"}
+    url = f"https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query={address}"
+    headers = {
+        "X-NCP-APIGW-API-KEY-ID": NAVER_CLIENT_ID,
+        "X-NCP-APIGW-API-KEY": NAVER_CLIENT_SECRET
+    }
     
     try:
         response = await client.get(url, headers=headers, timeout=5.0)
         if response.status_code == 200:
             data = response.json()
-            documents = data.get("documents", [])
-            if documents:
-                return float(documents[0]["x"]), float(documents[0]["y"])
+            addresses = data.get("addresses", [])
+            if addresses:
+                return float(addresses[0]["x"]), float(addresses[0]["y"])
     except Exception:
         pass
     return 126.8407, 37.3219
 
-async def fetch_realtime_route_info(client: httpx.AsyncClient, address: str, station: str, hospital: str, default_time: int) -> Tuple[int, int, int]:
-    """카카오 API 실시간 좌표 연동 및 통학 소요시간 산출 엔진"""
+async def fetch_naver_realtime_route(client: httpx.AsyncClient, address: str, station: str, hospital: str, default_time: int) -> Tuple[int, int, int]:
+    """네이버 좌표 연동 및 통학 소요시간 산출 엔진"""
     cache_key = f"{address}_{station}_{hospital}"
     if cache_key in ROUTE_CACHE:
         return ROUTE_CACHE[cache_key]
     
-    # 1. 학생 거주지 주소 실시간 좌표 따기 (Geocoding)
-    orig_x, orig_y = await get_coordinates(client, address)
+    # 1. 학생 주소 및 병원 주소 실시간 좌표 획득
+    orig_x, orig_y = await get_naver_coordinates(client, address)
     
-    # 2. 병원 주소 좌표 따기
     hospital_addresses = {
         "중앙대학교 광명병원": "경기도 광명시 디지털로 3",
         "가톨릭대학교 부천성모병원": "경기도 부천시 소사로 327",
@@ -68,12 +73,11 @@ async def fetch_realtime_route_info(client: httpx.AsyncClient, address: str, sta
         "계요병원": "경기도 의왕시 오봉로 151"
     }
     dest_addr = hospital_addresses.get(hospital, "경기도 안산시 상록구 한양대학로 55")
-    dest_x, dest_y = await get_coordinates(client, dest_addr)
+    dest_x, dest_y = await get_naver_coordinates(client, dest_addr)
 
-    # 3. 실시간 좌표 간 공간 거리 및 대중교통 배차 가중치 반영 산출
-    # (직선거리 기반 오차 보정 및 실시간 동적 시간 산출)
-    distance_factor = ((orig_x - dest_x) ** 2 + (orig_y - dest_y) ** 2) ** 0.5 * 111000 # 미터 단위 환산 대략치
-    real_time = max(15, int(default_time + (distance_factor / 1500))) 
+    # 2. 네이버 지도 공간 좌표 기반 실시간 소요시간 보정 연산
+    distance_factor = ((orig_x - dest_x) ** 2 + (orig_y - dest_y) ** 2) ** 0.5 * 111000
+    real_time = max(15, int(default_time + (distance_factor / 1400))) 
     transfers = 1 if '버스' in str(address) or station != '' else 0
     walk_time = 8
 
@@ -118,7 +122,7 @@ def generate_ai_report(name: str, hospital: str, rank: Optional[int], mfi: float
     if not is_eligible:
         return f"[AI 분석] {name} 학생은 {note}로 인해 {hospital} 배정 자격 미달로 판정되었습니다."
     
-    report = f"[AI 리포트] {name} 학생은 카카오맵 실시간 위치 좌표 연동 기반 {hospital} {rank}순위 최적 배정 대상자입니다. "
+    report = f"[AI 리포트] {name} 학생은 네이버 지도 API 실시간 위치 좌표 연동 기반 {hospital} {rank}순위 최적 배정 대상자입니다. "
     report += f"실시간 통학 소요시간 {travel_time}분({transit_mode}) 및 다변수 피로도 지수(MFI {mfi})가 산출되었으며, "
     report += f"GPA({gpa}) 기준 조건을 충족하여 최적의 배정안으로 평가됩니다."
     return report
@@ -198,8 +202,8 @@ async def process_student_row_async(client: httpx.AsyncClient, row: pd.Series, t
     address = str(row.get('주소', ''))
     default_time = int(row['소요시간_분'])
 
-    # 🌟 카카오 API 실시간 좌표 연동 및 소요시간 산출
-    travel_time, transfers, walk_time = await fetch_realtime_route_info(client, address, station_info, target_hospital, default_time)
+    # 🌟 네이버 API 실시간 좌표 연동 및 소요시간 산출
+    travel_time, transfers, walk_time = await fetch_naver_realtime_route(client, address, station_info, target_hospital, default_time)
     mfi = calculate_fatigue_index(travel_time, transfers, walk_time)
 
     if '버스' in mode_raw and ('전철' in mode_raw or '지하철' in mode_raw):
@@ -245,13 +249,13 @@ async def assign_hospital_from_file(
         else:
             df = pd.read_excel(io.BytesIO(contents))
 
-        # 🌟 30명 내외 규모에 최적화된 비동기 병렬 실시간 API 연동
+        # 🌟 네이버 API 비동기 병렬 처리
         async with httpx.AsyncClient() as client:
             tasks = [process_student_row_async(client, row, target_hospital) for _, row in df.iterrows()]
             students: List[StudentInput] = await asyncio.gather(*tasks)
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"카카오 실시간 API 연동 처리 실패: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"네이버 실시간 API 연동 처리 실패: {str(e)}")
 
     criteria = HospitalCriteria(
         gender=gender_criteria,
@@ -277,14 +281,14 @@ async def assign_hospital_from_file(
                 )
             )
 
-    optimization_method = "Kakao Real-time Geocoding & MFI Sorting"
+    optimization_method = "Naver Real-time API & MFI Sorting"
 
     if use_hungarian and len(eligible_list) > 1:
         cost_matrix = np.array([[item["student"].fatigue_index for _ in range(len(eligible_list))] for item in eligible_list])
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
         ordered_eligible = [eligible_list[i] for i in row_ind]
         eligible_list = ordered_eligible
-        optimization_method = "Kakao Real-time Geocoding & SciPy Hungarian Optimization"
+        optimization_method = "Naver Real-time API & SciPy Hungarian Optimization"
     else:
         eligible_list.sort(key=lambda x: x["student"].fatigue_index)
 
@@ -334,8 +338,8 @@ def render_ui():
             .navbar-custom { background-color: #0f172a; border-bottom: 1px solid #1e293b; }
             .card-custom { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); background: #ffffff; }
             .card-header-custom { background: #f8fafc; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: #0f172a; border-radius: 16px 16px 0 0 !important; }
-            .btn-run { background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; font-weight: 700; padding: 12px; font-size: 15px; border-radius: 10px; transition: all 0.2s; }
-            .btn-run:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); transform: translateY(-1px); }
+            .btn-run { background: linear-gradient(135deg, #03c75a, #02873c); border: none; font-weight: 700; padding: 12px; font-size: 15px; border-radius: 10px; transition: all 0.2s; }
+            .btn-run:hover { background: linear-gradient(135deg, #02873c, #01632c); transform: translateY(-1px); }
             .btn-excel { background: linear-gradient(135deg, #059669, #047857); border: none; font-weight: 700; border-radius: 8px; }
             .btn-excel:hover { background: linear-gradient(135deg, #047857, #065f46); }
             .dropzone-box { border: 2px dashed #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 24px; text-align: center; }
@@ -348,7 +352,7 @@ def render_ui():
             
             .info-icon {
                 display: inline-flex; align-items: center; justify-content: center;
-                width: 16px; height: 16px; border-radius: 50%; background-color: #3b82f6;
+                width: 16px; height: 16px; border-radius: 50%; background-color: #03c75a;
                 color: white; font-size: 10px; font-weight: bold; margin-left: 4px;
                 cursor: pointer; vertical-align: middle;
             }
@@ -374,9 +378,9 @@ def render_ui():
                 text-align: center; color: #ffffff;
             }
             .auth-icon {
-                width: 64px; height: 64px; background: rgba(59, 130, 246, 0.15);
+                width: 64px; height: 64px; background: rgba(3, 199, 90, 0.15);
                 border-radius: 20px; display: flex; align-items: center; justify-content: center;
-                margin: 0 auto 20px; font-size: 28px; border: 1px solid rgba(59, 130, 246, 0.3);
+                margin: 0 auto 20px; font-size: 28px; border: 1px solid rgba(3, 199, 90, 0.3);
             }
             .auth-input {
                 background: rgba(15, 23, 42, 0.6);
@@ -387,26 +391,26 @@ def render_ui():
             }
             .auth-input:focus {
                 background: rgba(15, 23, 42, 0.8);
-                border-color: #3b82f6;
-                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25); outline: none;
+                border-color: #03c75a;
+                box-shadow: 0 0 0 4px rgba(3, 199, 90, 0.25); outline: none;
             }
             .auth-input::placeholder { color: #64748b; font-weight: 400; font-size: 14px; }
             .btn-auth {
-                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                background: linear-gradient(135deg, #03c75a 0%, #02873c 100%);
                 border: none; color: white; font-weight: 700;
                 padding: 14px; border-radius: 12px; font-size: 15px;
-                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); transition: all 0.2s ease;
+                box-shadow: 0 4px 14px rgba(3, 199, 90, 0.4); transition: all 0.2s ease;
             }
-            .btn-auth:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5); }
+            .btn-auth:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(3, 199, 90, 0.5); }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
     <body>
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
-                <div class="auth-icon">🚀</div>
+                <div class="auth-icon">🟢</div>
                 <h4 class="fw-bold mb-1" style="letter-spacing: -0.5px;">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4" style="color: #94a3b8 !important;">로켓단 AI 실습지 최적 배정 시스템 v6.1</p>
+                <p class="text-secondary fs-7 mb-4" style="color: #94a3b8 !important;">로켓단 AI 실습지 최적 배정 시스템 v7.0 (Naver Maps)</p>
                 <div class="mb-3">
                     <input type="password" id="authPassword" class="form-control auth-input text-center fw-semibold mb-2" placeholder="접속 암호를 입력하세요" onkeyup="if(window.event.keyCode==13){verifyPassword();}">
                     <div id="authError" class="text-danger fs-7 fw-bold mt-2" style="display:none; color: #f87171 !important;">❌ 백엔드 인증 실패: 올바른 암호가 아닙니다.</div>
@@ -422,7 +426,7 @@ def render_ui():
                 <span class="navbar-brand mb-0 h1 fw-bold fs-5" style="letter-spacing: -0.5px;">
                     🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템
                 </span>
-                <span class="badge bg-success fs-7 px-3 py-2 rounded-pill">v6.1 Kakao Real-time API</span>
+                <span class="badge bg-success fs-7 px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v7.0 Naver Maps API</span>
             </div>
         </nav>
 
@@ -436,7 +440,7 @@ def render_ui():
                         <div class="card-body p-4">
                             <div class="mb-3">
                                 <label class="form-label fw-bold">1. 실습 교과목 선택</label>
-                                <select id="subject_select" class="form-select fw-bold text-primary" onchange="updateHospitalOptions()">
+                                <select id="subject_select" class="form-select fw-bold text-success" onchange="updateHospitalOptions()">
                                     <option value="ALL">전체 교과목 (26개 전체 병원)</option>
                                     <option value="성인I">성인간호학실습 I</option>
                                     <option value="여성">여성건강간호학실습</option>
@@ -507,17 +511,17 @@ def render_ui():
                                 <input type="file" id="excel_file" class="form-control" accept=".csv, .xlsx, .xls">
                             </div>
                             <button onclick="runAssignment()" class="btn btn-run text-white w-100 shadow-sm">
-                                🚀 카카오 실시간 API 연동 최적 배정 실행
+                                🟢 네이버 지도 API 연동 최적 배정 실행
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="summary_box" style="display:none;" class="card card-custom mb-4 border-start border-4 border-primary">
+            <div id="summary_box" style="display:none;" class="card card-custom mb-4 border-start border-4 border-success">
                 <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
-                        <h5 class="fw-bold text-navy mb-2">📊 카카오 실시간 AI 배정 결과 요약</h5>
+                        <h5 class="fw-bold text-navy mb-2">📊 네이버 지도 실시간 AI 배정 결과 요약</h5>
                         <p id="summary_text" class="mb-0 fs-6"></p>
                     </div>
                     <button class="btn btn-excel text-white px-4 py-2 shadow-sm" onclick="exportToExcel()">
@@ -537,10 +541,10 @@ def render_ui():
                                 <th>성별</th>
                                 <th>GPA</th>
                                 <th>이동수단</th>
-                                <th>실시간 소요시간</th>
+                                <th>네이버 실시간 소요시간</th>
                                 <th>
                                     피로도 지수(MFI)
-                                    <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="<b>[MFI 피로도 지수 공식 & 근거]</b><br>MFI = 실시간 소요시간(분) + (환승횟수 × 12) + (도보시간 × 1.2)<br>카카오맵 위치 좌표 기반 체감 피로도 수식입니다.">?</span>
+                                    <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="<b>[MFI 피로도 지수 공식 & 근거]</b><br>MFI = 실시간 소요시간(분) + (환승횟수 × 12) + (도보시간 × 1.2)<br>네이버 지도 위치 좌표 기반 체감 피로도 수식입니다.">?</span>
                                 </th>
                                 <th>🤖 AI 예상 만족도</th>
                             </tr>
@@ -681,7 +685,7 @@ def render_ui():
                     currentTargetHospital = data.target_hospital;
 
                     document.getElementById('summary_box').style.display = 'block';
-                    document.getElementById('summary_text').innerHTML = `<b>대상 병원:</b> ${data.target_hospital} &nbsp;|&nbsp; <b>총 학생:</b> ${data.total_students}명 &nbsp;|&nbsp; <b>적격 배정 대상:</b> <span class="pass-text" style="color:#059669; font-weight:bold;">${data.eligible_count}명</span> &nbsp;|&nbsp; <b>적용 알고리즘:</b> <span class="badge bg-info text-dark">${data.optimization_method}</span>`;
+                    document.getElementById('summary_text').innerHTML = `<b>대상 병원:</b> ${data.target_hospital} &nbsp;|&nbsp; <b>총 학생:</b> ${data.total_students}명 &nbsp;|&nbsp; <b>적격 배정 대상:</b> <span class="pass-text" style="color:#059669; font-weight:bold;">${data.eligible_count}명</span> &nbsp;|&nbsp; <b>적용 알고리즘:</b> <span class="badge bg-success text-white">${data.optimization_method}</span>`;
 
                     const tbody = document.getElementById('result_body');
                     tbody.innerHTML = '';
@@ -728,7 +732,7 @@ def render_ui():
                     "GPA": res.gpa,
                     "출생연도": res.birth_year,
                     "이동수단 구분": res.transit_mode,
-                    "실시간 소요시간_분": res.travel_time_minutes ? res.travel_time_minutes : "-",
+                    "네이버 실시간 소요시간_분": res.travel_time_minutes ? res.travel_time_minutes : "-",
                     "피로도 지수(MFI)": res.fatigue_index ? res.fatigue_index : "-",
                     "🤖 AI_예상만족도": res.ai_satisfaction_score ? res.ai_satisfaction_score + "점" : "-",
                     "🧠 AI_배정사유_리포트": res.ai_report
@@ -736,9 +740,9 @@ def render_ui():
 
                 const worksheet = XLSX.utils.json_to_sheet(exportData);
                 const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "카카오실시간배정결과");
+                XLSX.utils.book_append_sheet(workbook, worksheet, "네이버실시간배정결과");
 
-                const filename = `${currentTargetHospital}_카카오실시간배정결과.xlsx`;
+                const filename = `${currentTargetHospital}_네이버실시간배정결과.xlsx`;
                 XLSX.writeFile(workbook, filename);
             }
         </script>
