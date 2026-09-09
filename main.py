@@ -67,7 +67,7 @@ async def assign_hospital_from_file(
     file: UploadFile = File(...)
 ):
     if not target_hospital or target_hospital.strip() == "":
-        raise HTTPException(status_code=400, detail="배정 대상 병원 이름을 입력해 주세요.")
+        raise HTTPException(status_code=400, detail="배정 대상 병원을 선택해 주세요.")
 
     try:
         contents = await file.read()
@@ -78,6 +78,17 @@ async def assign_hospital_from_file(
 
         students = []
         for _, row in df.iterrows():
+            # 이동수단 세부구분 (전철, 버스, 전철+버스)
+            mode_raw = str(row.get('이동수단', '대중교통'))
+            station_info = str(row.get('인근역', ''))
+            
+            if '버스' in mode_raw:
+                detail_mode = '시내/시외버스'
+            elif '전철' in mode_raw or '지하철' in mode_raw or station_info != '':
+                detail_mode = '지하철(전철)'
+            else:
+                detail_mode = '대중교통(버스/전철)'
+
             students.append(
                 StudentInput(
                     student_id=str(row['학번']),
@@ -86,9 +97,9 @@ async def assign_hospital_from_file(
                     gpa=float(row['GPA']),
                     birth_year=int(row['출생연도']),
                     address=str(row.get('주소', '')),
-                    nearest_station=str(row.get('인근역', '')),
+                    nearest_station=station_info,
                     travel_time_minutes=int(row['소요시간_분']),
-                    transit_mode=str(row.get('이동수단', '대중교통'))
+                    transit_mode=detail_mode
                 )
             )
     except Exception as e:
@@ -164,6 +175,7 @@ def render_ui():
             .pass-text { color: #2f855a; font-weight: bold; }
             .fail-text { color: #e53e3e; font-weight: bold; }
             .rank-badge { background-color: #d69e2e; color: white; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+            .badge-mode { background-color: #e2e8f0; color: #2b6cb0; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
@@ -174,7 +186,7 @@ def render_ui():
                 <span class="navbar-brand mb-0 h1 fw-bold fs-5">
                     🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템
                 </span>
-                <span class="badge bg-secondary fs-7">v2.0 Web Dashboard</span>
+                <span class="badge bg-secondary fs-7">v2.1 Dashboard</span>
             </div>
         </nav>
 
@@ -187,7 +199,7 @@ def render_ui():
                             📌 STEP 1. 교과목 및 병원 조건 설정
                         </div>
                         <div class="card-body p-4">
-                            <!-- 실습 교과목 선택 추가 -->
+                            <!-- 1. 실습 교과목 선택 -->
                             <div class="mb-3">
                                 <label class="form-label fw-bold">1. 실습 교과목 선택</label>
                                 <select id="subject_select" class="form-select fw-bold text-primary" onchange="updateHospitalOptions()">
@@ -195,37 +207,53 @@ def render_ui():
                                     <option value="성인I">성인간호학실습 I</option>
                                     <option value="여성">여성건강간호학실습</option>
                                     <option value="성인II">성인간호학실습 II</option>
-                                    <option value="아동">아동간호학실습(학기중)</option>
+                                    <option value="아동">아동간호학실습</option>
                                     <option value="정신">정신간호학실습</option>
                                 </select>
                             </div>
 
+                            <!-- 2. 배정 대상 병원 드롭다운 클릭/드래그 선택 -->
                             <div class="mb-3">
                                 <label class="form-label fw-bold">2. 배정 대상 병원 선택</label>
-                                <input type="text" id="hospital_name" list="hospital_list" class="form-select" placeholder="교과목 선택 시 해당 병원이 자동 검색됩니다..." value="고려대학교 안산병원">
-                                <datalist id="hospital_list">
-                                    <!-- JavaScript로 교과목별 자동 생성됨 -->
-                                </datalist>
+                                <select id="hospital_select" class="form-select fw-bold">
+                                    <!-- JavaScript로 클릭 선택 가능한 option 태그 자동 생성 -->
+                                </select>
                             </div>
 
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold">성별 조건</label>
-                                    <select id="gender_criteria" class="form-select">
-                                        <option value="무관" selected>무관</option>
-                                        <option value="남성만">남성만</option>
-                                        <option value="여성만">여성만</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold">최소 GPA</label>
-                                    <input type="number" step="0.1" id="min_gpa" class="form-control" value="3.5">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold">출생연도</label>
-                                    <input type="number" id="birth_year" class="form-control" value="2003" placeholder="2003년 이후">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">3. 성별 조건</label>
+                                <select id="gender_criteria" class="form-select">
+                                    <option value="무관" selected>무관</option>
+                                    <option value="남성만">남성만</option>
+                                    <option value="여성만">여성만</option>
+                                </select>
+                            </div>
+
+                            <!-- 세부 설정 아코디언 토글 -->
+                            <div class="accordion" id="advancedOptions">
+                                <div class="accordion-item border-0 bg-light rounded">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed bg-light fw-bold text-secondary fs-7 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced">
+                                            ⚙️ 세부 자격 조건 설정 (최소 GPA / 출생연도)
+                                        </button>
+                                    </h2>
+                                    <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#advancedOptions">
+                                        <div class="accordion-body pt-2 pb-3">
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <label class="form-label fs-7 fw-bold mb-1">최소 GPA (선택)</label>
+                                                    <input type="number" step="0.1" id="min_gpa" class="form-control form-control-sm" placeholder="예: 3.5">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label fs-7 fw-bold mb-1">출생연도 조건 (선택)</label>
+                                                    <input type="number" id="birth_year" class="form-control form-control-sm" placeholder="예: 2003년 이후">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -273,7 +301,7 @@ def render_ui():
                                 <th>이름</th>
                                 <th>성별</th>
                                 <th>GPA</th>
-                                <th>이동수단</th>
+                                <th>이동수단 세부구분</th>
                                 <th>소요시간</th>
                                 <th>자격 검증 및 상태 메시지</th>
                             </tr>
@@ -284,6 +312,7 @@ def render_ui():
             </div>
         </div>
 
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         <script>
             // 2026학년도 교과목별 실습지 데이터베이스 매핑
             const hospitalDB = {
@@ -312,14 +341,12 @@ def render_ui():
 
             function updateHospitalOptions() {
                 const subject = document.getElementById('subject_select').value;
-                const datalist = document.getElementById('hospital_list');
-                const hospitalInput = document.getElementById('hospital_name');
+                const selectBox = document.getElementById('hospital_select');
                 
-                datalist.innerHTML = '';
+                selectBox.innerHTML = '';
                 let targetHospitals = [];
 
                 if (subject === 'ALL') {
-                    // 전체 26개 중복제거 병원
                     const allSet = new Set();
                     Object.values(hospitalDB).forEach(arr => arr.forEach(h => allSet.add(h)));
                     targetHospitals = Array.from(allSet);
@@ -330,15 +357,11 @@ def render_ui():
                 targetHospitals.forEach(hName => {
                     const opt = document.createElement('option');
                     opt.value = hName;
-                    datalist.appendChild(opt);
+                    opt.textContent = hName;
+                    selectBox.appendChild(opt);
                 });
-
-                if (targetHospitals.length > 0) {
-                    hospitalInput.value = targetHospitals[0];
-                }
             }
 
-            // 페이지 로드 시 초기화
             window.onload = function() {
                 updateHospitalOptions();
             };
@@ -347,9 +370,9 @@ def render_ui():
             let currentTargetHospital = "";
 
             async function runAssignment() {
-                const hospitalName = document.getElementById('hospital_name').value;
+                const hospitalName = document.getElementById('hospital_select').value;
                 if (!hospitalName || hospitalName.trim() === '') {
-                    alert('배정 대상 병원 이름을 선택하거나 입력해 주세요!');
+                    alert('배정 대상 병원을 선택해 주세요!');
                     return;
                 }
 
@@ -359,11 +382,14 @@ def render_ui():
                     return;
                 }
 
+                const minGpaVal = document.getElementById('min_gpa').value;
+                const birthYearVal = document.getElementById('birth_year').value;
+
                 const formData = new FormData();
                 formData.append('target_hospital', hospitalName);
                 formData.append('gender_criteria', document.getElementById('gender_criteria').value);
-                formData.append('min_gpa', document.getElementById('min_gpa').value);
-                formData.append('birth_year_after', document.getElementById('birth_year').value);
+                if (minGpaVal) formData.append('min_gpa', minGpaVal);
+                if (birthYearVal) formData.append('birth_year_after', birthYearVal);
                 formData.append('file', fileInput.files[0]);
 
                 try {
@@ -399,7 +425,7 @@ def render_ui():
                             <td><b>${res.name}</b></td>
                             <td>${res.gender}</td>
                             <td>${res.gpa}</td>
-                            <td>${res.transit_mode}</td>
+                            <td><span class="badge-mode">${res.transit_mode}</span></td>
                             <td><b>${timeText}</b></td>
                             <td class="${statusClass}">${res.status_note}</td>
                         `;
@@ -424,7 +450,7 @@ def render_ui():
                     "성별": res.gender,
                     "GPA": res.gpa,
                     "출생연도": res.birth_year,
-                    "이동수단": res.transit_mode,
+                    "이동수단 구분": res.transit_mode,
                     "소요시간_분": res.travel_time_minutes ? res.travel_time_minutes : "-",
                     "자격 상태": res.is_eligible ? "적격" : "부적격",
                     "자격 검증 및 상태 메시지": res.status_note
