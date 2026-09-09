@@ -10,7 +10,7 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.1)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.2)")
 
 SECRET_PASSWORD = "ansan king"
 
@@ -255,11 +255,10 @@ def render_ui():
             .btn-run { background: linear-gradient(135deg, #03c75a, #02873c); border: none; font-weight: 700; padding: 12px; border-radius: 10px; color: white; transition: all 0.2s; }
             .btn-run:hover { background: linear-gradient(135deg, #02873c, #01632c); }
             .btn-excel { background: linear-gradient(135deg, #059669, #047857); border: none; font-weight: 700; border-radius: 8px; color: white; }
-            .table-custom th { background-color: #0f172a; color: white; text-align: center; font-size: 13.5px; }
+            .table-custom th { background-color: #0f172a; color: white; text-align: center; font-size: 13.5px; cursor: help; }
             .table-custom td { vertical-align: middle; text-align: center; font-size: 13.5px; }
             .rank-badge { background: #d97706; color: white; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 11.5px; }
-            .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe; cursor: help; }
-            .sat-badge { cursor: help; }
+            .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe; }
             .auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%); z-index: 9999; display: flex; justify-content: center; align-items: center; }
             .auth-card { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(20px); width: 90%; max-width: 400px; padding: 40px 32px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; color: white; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
             .auth-input { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.15); color: white !important; border-radius: 12px; padding: 14px; text-align: center; }
@@ -270,7 +269,7 @@ def render_ui():
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.1)</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.2)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
                 <button onclick="verifyPassword()" class="btn btn-success w-100 fw-bold py-2">시스템 접속하기</button>
             </div>
@@ -279,7 +278,7 @@ def render_ui():
         <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
             <div class="container px-4">
                 <span class="navbar-brand fw-bold">간호학과 스마트 실습지 최적 배정 시스템</span>
-                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-1.1</span>
+                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-1.2</span>
             </div>
         </nav>
 
@@ -380,9 +379,9 @@ def render_ui():
                                 <th>이름</th>
                                 <th>GPA</th>
                                 <th>주소</th>
-                                <th>실시간 대중교통 소요시간(05시 기준)</th>
-                                <th>체감 피로도(MFI)</th>
-                                <th>AI 만족도</th>
+                                <th title="수도권 법정동별 실제 대중교통망을 바탕으로 이른 출근 시간대(오전 05시) 기준 소요 시간을 산출한 데이터입니다.">실시간 대중교통 소요시간(05시 기준) ℹ️</th>
+                                <th title="MFI (Modified Fatigue Index): 통학 소요 시간 및 환승 횟수, 도보 이동 거리 등 학생이 겪는 신체적·시간적 통학 피로도를 수치화한 지수입니다.">체감 피로도(MFI) ℹ️</th>
+                                <th title="학생의 GPA, 통학 시간, 피로도(MFI) 등의 변수를 머신러닝(RandomForest) 모델에 입력하여 예측한 종합 만족도 점수입니다.">AI 만족도 ℹ️</th>
                             </tr>
                         </thead>
                         <tbody id="result_body"></tbody>
@@ -449,7 +448,6 @@ def render_ui():
                 currentHospital = data.target_hospital;
 
                 document.getElementById('summary_box').style.display = 'block';
-                // '적격 배정' 단어 제거하고 총 학생수만 표시
                 document.getElementById('summary_text').innerHTML = `<b>배정 병원:</b> ${hospital} | <b>총 학생수:</b> ${data.total_students}명`;
 
                 let tbody = document.getElementById('result_body');
@@ -457,9 +455,6 @@ def render_ui():
                 data.results.forEach(r => {
                     if(!r.is_eligible) return;
                     let tr = document.createElement('tr');
-                    
-                    let mfiTooltip = `산출 공식: 통학시간(${r.travel_time_minutes}분) + (환승횟수 × 12.0) + (도보시간 × 1.2) = 총 피로도 지수 ${r.fatigue_index}`;
-                    let satTooltip = `산출 근거: 통학 소요시간(${r.travel_time_minutes}분), 환승 및 도보 피로도(MFI: ${r.fatigue_index}), 학업 성취도(GPA: ${r.gpa})를 종합하여 머신러닝(RandomForest) 모델로 예측한 만족도 점수(${r.ai_satisfaction_score}점)입니다.`;
 
                     tr.innerHTML = `
                         <td><span class="rank-badge">${r.rank}순위</span></td>
@@ -468,8 +463,8 @@ def render_ui():
                         <td>${r.gpa}</td>
                         <td class="text-secondary small text-start">${r.address}</td>
                         <td><b>${r.travel_time_minutes}분</b></td>
-                        <td><span class="mfi-badge" title="${mfiTooltip}">${r.fatigue_index}</span></td>
-                        <td><span class="badge bg-success sat-badge" title="${satTooltip}">${r.ai_satisfaction_score}점</span></td>
+                        <td><span class="mfi-badge">${r.fatigue_index}</span></td>
+                        <td><span class="badge bg-success">${r.ai_satisfaction_score}점</span></td>
                     `;
                     tbody.appendChild(tr);
                 });
