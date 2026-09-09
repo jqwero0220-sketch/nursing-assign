@@ -180,45 +180,34 @@ def render_ui():
 
         <div class="container pb-5" style="max-width: 1080px;">
             <div class="row g-4 mb-4">
-                <!-- STEP 1: 조건 설정 -->
+                <!-- STEP 1: 교과목 & 병원 조건 설정 -->
                 <div class="col-md-6">
                     <div class="card card-custom h-100">
                         <div class="card-header card-header-custom py-3 px-4 fs-6">
-                            📌 STEP 1. 병원 자격 조건 설정
+                            📌 STEP 1. 교과목 및 병원 조건 설정
                         </div>
                         <div class="card-body p-4">
+                            <!-- 실습 교과목 선택 추가 -->
                             <div class="mb-3">
-                                <label class="form-label fw-bold">배정 대상 병원 선택 (2026학년도 안산대 지정 실습지)</label>
-                                <input type="text" id="hospital_name" list="hospital_list" class="form-select" placeholder="병원 검색 또는 직접 입력..." value="고려대학교 안산병원">
+                                <label class="form-label fw-bold">1. 실습 교과목 선택</label>
+                                <select id="subject_select" class="form-select fw-bold text-primary" onchange="updateHospitalOptions()">
+                                    <option value="ALL">전체 교과목 (26개 전체 병원)</option>
+                                    <option value="성인I">성인간호학실습 I</option>
+                                    <option value="여성">여성건강간호학실습</option>
+                                    <option value="성인II">성인간호학실습 II</option>
+                                    <option value="아동">아동간호학실습(학기중)</option>
+                                    <option value="정신">정신간호학실습</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">2. 배정 대상 병원 선택</label>
+                                <input type="text" id="hospital_name" list="hospital_list" class="form-select" placeholder="교과목 선택 시 해당 병원이 자동 검색됩니다..." value="고려대학교 안산병원">
                                 <datalist id="hospital_list">
-                                    <option value="중앙대학교 광명병원">
-                                    <option value="가톨릭대학교 부천성모병원">
-                                    <option value="가톨릭대학교 성빈센트병원">
-                                    <option value="고려대학교 안산병원">
-                                    <option value="순천향대학교 부천병원">
-                                    <option value="순천향대학교 서울병원">
-                                    <option value="연세대학교 용인세브란스병원">
-                                    <option value="인천기독병원">
-                                    <option value="한림대학교 성심병원">
-                                    <option value="인하대병원">
-                                    <option value="한림대학교 동탄성심병원">
-                                    <option value="봄빛병원">
-                                    <option value="우성병원">
-                                    <option value="지샘병원">
-                                    <option value="한빛병원">
-                                    <option value="아주대학교 병원">
-                                    <option value="아이원병원">
-                                    <option value="웰봄병원">
-                                    <option value="단원병원">
-                                    <option value="서울어린이 병원">
-                                    <option value="안산시 정신건강복지센터">
-                                    <option value="안산시 중독관리통합지원센터">
-                                    <option value="이음병원">
-                                    <option value="군포시 정신건강복지센터">
-                                    <option value="의왕시 정신건강복지센터">
-                                    <option value="계요병원">
+                                    <!-- JavaScript로 교과목별 자동 생성됨 -->
                                 </datalist>
                             </div>
+
                             <div class="row g-2 mb-3">
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold">성별 조건</label>
@@ -233,7 +222,7 @@ def render_ui():
                                     <input type="number" step="0.1" id="min_gpa" class="form-control" value="3.5">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold">출생연도 조건</label>
+                                    <label class="form-label fw-bold">출생연도</label>
                                     <input type="number" id="birth_year" class="form-control" value="2003" placeholder="2003년 이후">
                                 </div>
                             </div>
@@ -296,6 +285,64 @@ def render_ui():
         </div>
 
         <script>
+            // 2026학년도 교과목별 실습지 데이터베이스 매핑
+            const hospitalDB = {
+                "성인I": [
+                    "중앙대학교 광명병원", "가톨릭대학교 부천성모병원", "가톨릭대학교 성빈센트병원",
+                    "고려대학교 안산병원", "순천향대학교 부천병원", "순천향대학교 서울병원",
+                    "연세대학교 용인세브란스병원", "인천기독병원", "한림대학교 성심병원"
+                ],
+                "여성": [
+                    "인하대병원", "한림대학교 동탄성심병원", "순천향대학교 서울병원",
+                    "봄빛병원", "우성병원", "지샘병원", "한빛병원", "가톨릭대학교 부천성모병원"
+                ],
+                "성인II": [
+                    "인하대병원", "가톨릭대학교 부천성모병원", "가톨릭대학교 성빈센트병원",
+                    "고려대학교 안산병원", "아주대학교 병원", "순천향대학교 부천병원",
+                    "순천향대학교 서울병원", "인천기독병원", "한림대학교 성심병원"
+                ],
+                "아동": [
+                    "아이원병원", "웰봄병원", "단원병원", "순천향대학교 서울병원", "서울어린이 병원"
+                ],
+                "정신": [
+                    "안산시 정신건강복지센터", "안산시 중독관리통합지원센터", "가톨릭대학교 성빈센트병원",
+                    "이음병원", "군포시 정신건강복지센터", "의왕시 정신건강복지센터", "계요병원"
+                ]
+            };
+
+            function updateHospitalOptions() {
+                const subject = document.getElementById('subject_select').value;
+                const datalist = document.getElementById('hospital_list');
+                const hospitalInput = document.getElementById('hospital_name');
+                
+                datalist.innerHTML = '';
+                let targetHospitals = [];
+
+                if (subject === 'ALL') {
+                    // 전체 26개 중복제거 병원
+                    const allSet = new Set();
+                    Object.values(hospitalDB).forEach(arr => arr.forEach(h => allSet.add(h)));
+                    targetHospitals = Array.from(allSet);
+                } else {
+                    targetHospitals = hospitalDB[subject] || [];
+                }
+
+                targetHospitals.forEach(hName => {
+                    const opt = document.createElement('option');
+                    opt.value = hName;
+                    datalist.appendChild(opt);
+                });
+
+                if (targetHospitals.length > 0) {
+                    hospitalInput.value = targetHospitals[0];
+                }
+            }
+
+            // 페이지 로드 시 초기화
+            window.onload = function() {
+                updateHospitalOptions();
+            };
+
             let currentResults = [];
             let currentTargetHospital = "";
 
