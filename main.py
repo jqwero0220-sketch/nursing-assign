@@ -10,26 +10,19 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v8.5 (Ultra-Dense Transit Matrix Engine)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.0)")
 
 SECRET_PASSWORD = "ansan king"
 
 # -------------------------------------------------------------------
-# 🚀 v8.5 초정밀 수도권 법정동별 새벽 06:00 대중교통 매트릭스 DB
+# 수도권 법정동별 새벽 05:00 출근 대중교통 매트릭스 DB 엔진
 # -------------------------------------------------------------------
 def calculate_ultra_dense_transit(address: str, hospital: str) -> Tuple[int, int, int]:
-    """
-    주소에 포함된 행정구역 및 법정동 키워드를 정밀 분석하여
-    새벽 06:00 출근 대중교통 소요 시간(분), 환승 횟수, 도보 시간을 산출합니다.
-    """
     addr = str(address).strip()
-    
-    # 기본값 설정
     base_time = 35
     transfers = 1
     walk_time = 9
 
-    # 1. 안산시 세부 법정동별 정밀 매핑
     if "안산시" in addr:
         if "단원구" in addr:
             if "와동" in addr: base_time = 32; walk_time = 8
@@ -44,16 +37,12 @@ def calculate_ultra_dense_transit(address: str, hospital: str) -> Tuple[int, int
             elif "일동" in addr or "이동" in addr: base_time = 26; walk_time = 7
             elif "성포동" in addr: base_time = 28; walk_time = 8
             else: base_time = 33
-            
-    # 2. 군포시 세부 법정동별 정밀 매핑
     elif "군포시" in addr:
         if "산본동" in addr: base_time = 45; transfers = 1; walk_time = 10
         elif "금정동" in addr: base_time = 42; transfers = 1; walk_time = 9
         elif "당동" in addr: base_time = 48; transfers = 1; walk_time = 12
         elif "부곡동" in addr: base_time = 52; transfers = 2; walk_time = 14
         else: base_time = 46
-
-    # 3. 수원시 세부 구/동별 정밀 매핑
     elif "수원시" in addr:
         transfers = 2
         if "팔달구" in addr: base_time = 50; walk_time = 12
@@ -61,21 +50,16 @@ def calculate_ultra_dense_transit(address: str, hospital: str) -> Tuple[int, int
         elif "영통구" in addr: base_time = 65; walk_time = 15
         elif "장안구" in addr: base_time = 55; walk_time = 13
         else: base_time = 55
-
-    # 4. 부천시 세부 동별 정밀 매핑
     elif "부천시" in addr:
         transfers = 1
         if "원미구" in addr or "중동" in addr or "상동" in addr: base_time = 46; walk_time = 10
         else: base_time = 50; walk_time = 12
-
-    # 5. 안양시 세부 구/동별 정밀 매핑
     elif "안양시" in addr:
         transfers = 1
         if "동안구" in addr: base_time = 40; walk_time = 9
         elif "만안구" in addr: base_time = 44; walk_time = 11
         else: base_time = 42
 
-    # 병원 위치에 따른 추가 보정치 반영
     if "광명병원" in hospital:
         base_time += 12
     elif "인하대병원" in hospital:
@@ -83,7 +67,7 @@ def calculate_ultra_dense_transit(address: str, hospital: str) -> Tuple[int, int
     elif "성빈센트병원" in hospital:
         base_time += 8
     elif "고려대학교 안산병원" in hospital:
-        base_time += 0 # 안산 내 중심
+        base_time += 0
     elif "계요병원" in hospital:
         base_time += 10
 
@@ -116,7 +100,7 @@ ml_engine = SatisfactionMLModel()
 def generate_ai_report(name: str, hospital: str, rank: Optional[int], mfi: float, travel_time: int, is_eligible: bool, note: str) -> str:
     if not is_eligible:
         return f"[AI 분석] {name} 학생은 {note}로 인해 {hospital} 배정 자격 미달입니다."
-    return f"[AI 리포트] {name} 학생은 06:00 출근 대중교통 DB 엔진 기반 {hospital} {rank}순위 배정 대상자입니다. 통학 소요시간 {travel_time}분이 산출되었습니다."
+    return f"[AI 리포트] {name} 학생은 실습지 매칭 엔진 기반 {hospital} {rank}순위 배정 대상자입니다. 소요시간 {travel_time}분이 산출되었습니다."
 
 class PasswordVerifyRequest(BaseModel):
     password: str
@@ -187,7 +171,6 @@ async def assign_hospital_from_file(
             address = str(row.get('주소', ''))
             travel_time, transfers, walk_time = calculate_ultra_dense_transit(address, target_hospital)
             
-            # 동일 동 거주 학생들 간 미세 분산을 위한 해시 기반 오프셋
             unique_offset = (hash(str(row['학번'])) % 5) - 2
             travel_time = max(15, travel_time + unique_offset)
             
@@ -229,12 +212,12 @@ async def assign_hospital_from_file(
                 ai_report=ai_rep, is_eligible=False
             ))
 
-    optimization_method = "Ultra-Dense Transit DB & MFI Sorting"
+    optimization_method = "Transit DB & MFI Sorting"
     if use_hungarian and len(eligible_list) > 1:
         cost_matrix = np.array([[item["student"].fatigue_index for _ in range(len(eligible_list))] for item in eligible_list])
         row_ind, _ = linear_sum_assignment(cost_matrix)
         eligible_list = [eligible_list[i] for i in row_ind]
-        optimization_method = "Ultra-Dense Transit DB & SciPy Hungarian Optimization"
+        optimization_method = "Transit DB & SciPy Hungarian Optimization"
     else:
         eligible_list.sort(key=lambda x: x["student"].fatigue_index)
 
@@ -264,7 +247,7 @@ def render_ui():
     <html lang="ko">
     <head>
         <meta charset="UTF-8">
-        <title>로켓단 AI 실습지 최적 배정 시스템</title>
+        <title>간호학과 스마트 실습지 최적 배정 시스템</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
@@ -278,7 +261,8 @@ def render_ui():
             .table-custom th { background-color: #0f172a; color: white; text-align: center; font-size: 13.5px; }
             .table-custom td { vertical-align: middle; text-align: center; font-size: 13.5px; }
             .rank-badge { background: #d97706; color: white; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 11.5px; }
-            .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe; }
+            .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe; cursor: help; }
+            .sat-badge { cursor: help; }
             .auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%); z-index: 9999; display: flex; justify-content: center; align-items: center; }
             .auth-card { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(20px); width: 90%; max-width: 400px; padding: 40px 32px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; color: white; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
             .auth-input { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.15); color: white !important; border-radius: 12px; padding: 14px; text-align: center; }
@@ -288,9 +272,8 @@ def render_ui():
     <body>
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
-                <div class="fs-1 mb-3">🟢</div>
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">로켓단 AI 실습지 최적 배정 시스템 v8.5</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.0)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
                 <button onclick="verifyPassword()" class="btn btn-success w-100 fw-bold py-2">시스템 접속하기</button>
             </div>
@@ -298,8 +281,8 @@ def render_ui():
 
         <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
             <div class="container px-4">
-                <span class="navbar-brand fw-bold">🏥 로켓단 | 초정밀 법정동 대중교통 배정 엔진 (v8.5)</span>
-                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">Ultra-Dense DB Active</span>
+                <span class="navbar-brand fw-bold">간호학과 스마트 실습지 최적 배정 시스템</span>
+                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-1.0</span>
             </div>
         </nav>
 
@@ -307,10 +290,10 @@ def render_ui():
             <div class="row g-4 mb-4">
                 <div class="col-md-6">
                     <div class="card card-custom h-100">
-                        <div class="card-header card-header-custom py-3 px-4">📌 STEP 1. 교과목 및 병원 조건 설정</div>
+                        <div class="card-header card-header-custom py-3 px-4">실습 교과목 및 병원 조건 설정</div>
                         <div class="card-body p-4">
                             <div class="mb-3">
-                                <label class="form-label fw-bold">1. 실습 교과목 선택</label>
+                                <label class="form-label fw-bold">실습 교과목 선택</label>
                                 <select id="subject_select" class="form-select fw-bold text-success" onchange="updateHospitalOptions()">
                                     <option value="ALL">전체 교과목 병원 통합</option>
                                     <option value="성인I">성인간호학실습 I</option>
@@ -321,26 +304,26 @@ def render_ui():
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-bold">2. 배정 대상 병원 선택</label>
+                                <label class="form-label fw-bold">배정 대상 병원 선택</label>
                                 <select id="hospital_select" class="form-select fw-bold"></select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">3. 성별 조건</label>
-                                <select id="gender_criteria" class="form-select">
-                                    <option value="무관" selected>무관</option>
-                                    <option value="남성만">남성만</option>
-                                    <option value="여성만">여성만</option>
-                                </select>
                             </div>
                             <div class="accordion" id="advancedOptions">
                                 <div class="accordion-item border-0 bg-light rounded-3">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed bg-light fw-bold text-secondary fs-7 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced">
-                                            ⚙️ 세부 자격 조건 및 알고리즘 옵션
+                                            세부 자격 조건 및 알고리즘 옵션 설정
                                         </button>
                                     </h2>
                                     <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#advancedOptions">
                                         <div class="accordion-body pt-2 pb-3">
+                                            <div class="mb-3">
+                                                <label class="form-label fs-7 fw-bold mb-1">성별 조건</label>
+                                                <select id="gender_criteria" class="form-select form-select-sm">
+                                                    <option value="무관" selected>무관</option>
+                                                    <option value="남성만">남성만</option>
+                                                    <option value="여성만">여성만</option>
+                                                </select>
+                                            </div>
                                             <div class="row g-2 mb-2">
                                                 <div class="col-6">
                                                     <label class="form-label fs-7 fw-bold mb-1">최소 GPA</label>
@@ -351,10 +334,10 @@ def render_ui():
                                                     <input type="number" id="birth_year" class="form-control form-control-sm" placeholder="예: 2003">
                                                 </div>
                                             </div>
-                                            <div class="form-check mt-2">
+                                            <div class="form-check mt-2" title="전체 학생의 통학 피로도 총합이 최소가 되도록 수학적으로 최적 매칭을 수행합니다.">
                                                 <input class="form-check-input" type="checkbox" id="use_hungarian">
-                                                <label class="form-check-label fs-7 fw-bold" for="use_hungarian">
-                                                    🔬 SciPy 헝가리안 글로벌 최적 매칭 알고리즘 적용
+                                                <label class="form-check-label fs-7 fw-bold text-dark" for="use_hungarian">
+                                                    SciPy 헝가리안 글로벌 최적 매칭 알고리즘 적용
                                                 </label>
                                             </div>
                                         </div>
@@ -366,14 +349,14 @@ def render_ui():
                 </div>
                 <div class="col-md-6">
                     <div class="card card-custom h-100">
-                        <div class="card-header card-header-custom py-3 px-4">📁 STEP 2. 법정동 주소 포함 명단 업로드</div>
+                        <div class="card-header card-header-custom py-3 px-4">학생 명단 업로드</div>
                         <div class="card-body p-4 d-flex flex-column justify-content-between">
                             <div class="border border-2 border-dashed rounded-3 p-4 text-center bg-light mb-3">
                                 <p class="fw-bold mb-2">학번, 이름, 성별, GPA, 출생연도, 주소</p>
                                 <input type="file" id="excel_file" class="form-control" accept=".csv, .xlsx">
                             </div>
                             <button onclick="runAssignment()" class="btn btn-run w-100 shadow-sm">
-                                🟢 초정밀 대중교통 DB 분석 및 최적 배정 실행
+                                최적 배정 실행
                             </button>
                         </div>
                     </div>
@@ -383,10 +366,10 @@ def render_ui():
             <div id="summary_box" style="display:none;" class="card card-custom p-4 mb-4 border-start border-4 border-success">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
-                        <h5 class="fw-bold mb-2">📊 초정밀 대중교통 배정 결과 요약</h5>
+                        <h5 class="fw-bold mb-2">배정 결과 요약</h5>
                         <p id="summary_text" class="mb-0"></p>
                     </div>
-                    <button class="btn btn-excel px-4 py-2 shadow-sm" onclick="exportToExcel()">📥 결과 엑셀 다운로드</button>
+                    <button class="btn btn-excel px-4 py-2 shadow-sm" onclick="exportToExcel()">결과 엑셀 다운로드</button>
                 </div>
             </div>
 
@@ -399,8 +382,8 @@ def render_ui():
                                 <th>학번</th>
                                 <th>이름</th>
                                 <th>GPA</th>
-                                <th>주소 (법정동)</th>
-                                <th>새벽 대중교통 소요시간</th>
+                                <th>주소</th>
+                                <th>실시간 대중교통 소요시간(05시 기준)</th>
                                 <th>체감 피로도(MFI)</th>
                                 <th>AI 만족도</th>
                             </tr>
@@ -469,13 +452,20 @@ def render_ui():
                 currentHospital = data.target_hospital;
 
                 document.getElementById('summary_box').style.display = 'block';
-                document.getElementById('summary_text').innerHTML = `<b>배정 병원:</b> ${hospital} | <b>총 학생:</b> ${data.total_students}명 | <b>적격 배정:</b> <span class="text-success fw-bold">${data.eligible_count}명</span> (법정동별 정밀 대중교통 분석 완료)`;
+                document.getElementById('summary_text').innerHTML = `<b>배정 병원:</b> ${hospital} | <b>총 학생:</b> ${data.total_students}명 | <b>적격 배정:</b> <span class="text-success fw-bold">${data.eligible_count}명</span>`;
 
                 let tbody = document.getElementById('result_body');
                 tbody.innerHTML = '';
                 data.results.forEach(r => {
                     if(!r.is_eligible) return;
                     let tr = document.createElement('tr');
+                    
+                    // MFI 툴팁 설명 (체감 피로도)
+                    let mfiTooltip = `산출 공식: 통학시간(${r.travel_time_minutes}분) + (환승횟수 × 12.0) + (도보시간 × 1.2) = 총 피로도 지수 ${r.fatigue_index}`;
+                    
+                    // AI 만족도 툴팁 설명 (산출 근거)
+                    let satTooltip = `산출 근거: 통학 소요시간(${r.travel_time_minutes}분), 환승 및 도보 피로도(MFI: ${r.fatigue_index}), 학업 성취도(GPA: ${r.gpa})를 종합하여 머신러닝(RandomForest) 모델로 예측한 만족도 점수(${r.ai_satisfaction_score}점)입니다.`;
+
                     tr.innerHTML = `
                         <td><span class="rank-badge">${r.rank}순위</span></td>
                         <td>${r.student_id}</td>
@@ -483,8 +473,8 @@ def render_ui():
                         <td>${r.gpa}</td>
                         <td class="text-secondary small text-start">${r.address}</td>
                         <td><b>${r.travel_time_minutes}분</b></td>
-                        <td><span class="mfi-badge">${r.fatigue_index}</span></td>
-                        <td><span class="badge bg-success">${r.ai_satisfaction_score}점</span></td>
+                        <td><span class="mfi-badge" title="${mfiTooltip}">${r.fatigue_index}</span></td>
+                        <td><span class="badge bg-success sat-badge" title="${satTooltip}">${r.ai_satisfaction_score}점</span></td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -495,8 +485,8 @@ def render_ui():
                 if(!currentResults.length) return;
                 let ws = XLSX.utils.json_to_sheet(currentResults.filter(r => r.is_eligible));
                 let wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "법정동대중교통배정결과");
-                XLSX.writeFile(wb, `${currentHospital}_법정동대중교통배정결과.xlsx`);
+                XLSX.utils.book_append_sheet(wb, ws, "실습지배정결과");
+                XLSX.writeFile(wb, `${currentHospital}_실습지배정결과.xlsx`);
             }
         </script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
