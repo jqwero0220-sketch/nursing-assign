@@ -1,6 +1,8 @@
 fastapi
 uvicorn
-pydantic
 pandas
 openpyxl
-python-multipart
+pydantic
+scikit-learn
+scipy
+numpy
