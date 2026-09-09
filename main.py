@@ -78,7 +78,6 @@ async def assign_hospital_from_file(
 
         students = []
         for _, row in df.iterrows():
-            # 이동수단 세부구분 (전철, 버스, 전철+버스)
             mode_raw = str(row.get('이동수단', '대중교통'))
             station_info = str(row.get('인근역', ''))
             
@@ -176,17 +175,37 @@ def render_ui():
             .fail-text { color: #e53e3e; font-weight: bold; }
             .rank-badge { background-color: #d69e2e; color: white; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
             .badge-mode { background-color: #e2e8f0; color: #2b6cb0; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
+            
+            /* 보안 인증 모달 스타일 */
+            .auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(26, 54, 93, 0.95); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+            .auth-card { background: white; width: 90%; max-width: 420px; padding: 35px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
     <body>
+        <!-- 보안 인증 암호 레이어 -->
+        <div id="authOverlay" class="auth-overlay">
+            <div class="auth-card">
+                <div class="fs-1 mb-2">🔒</div>
+                <h4 class="fw-bold text-navy mb-1">시스템 접속 인증</h4>
+                <p class="text-muted fs-7 mb-4">개인정보 보호를 위해 관리자 암호를 입력해 주세요.</p>
+                <div class="mb-3">
+                    <input type="password" id="authPassword" class="form-control form-control-lg text-center fw-bold" placeholder="접속 암호 입력..." onkeyup="if(window.event.keyCode==13){verifyPassword();}">
+                    <div id="authError" class="text-danger fs-7 mt-2 fw-bold" style="display:none;">❌ 암호가 올바르지 않습니다.</div>
+                </div>
+                <button onclick="verifyPassword()" class="btn btn-primary-custom text-white w-100 btn-lg fw-bold" style="background-color: #2b6cb0;">
+                    인증 및 시스템 접속
+                </button>
+            </div>
+        </div>
+
         <!-- Header Navbar -->
         <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
             <div class="container px-4">
                 <span class="navbar-brand mb-0 h1 fw-bold fs-5">
                     🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템
                 </span>
-                <span class="badge bg-secondary fs-7">v2.1 Dashboard</span>
+                <span class="badge bg-secondary fs-7">v2.2 Protected</span>
             </div>
         </nav>
 
@@ -212,11 +231,10 @@ def render_ui():
                                 </select>
                             </div>
 
-                            <!-- 2. 배정 대상 병원 드롭다운 클릭/드래그 선택 -->
+                            <!-- 2. 배정 대상 병원 드롭다운 선택 -->
                             <div class="mb-3">
                                 <label class="form-label fw-bold">2. 배정 대상 병원 선택</label>
                                 <select id="hospital_select" class="form-select fw-bold">
-                                    <!-- JavaScript로 클릭 선택 가능한 option 태그 자동 생성 -->
                                 </select>
                             </div>
 
@@ -229,7 +247,7 @@ def render_ui():
                                 </select>
                             </div>
 
-                            <!-- 세부 설정 아코디언 토글 -->
+                            <!-- 세부 설정 아코디언 -->
                             <div class="accordion" id="advancedOptions">
                                 <div class="accordion-item border-0 bg-light rounded">
                                     <h2 class="accordion-header">
@@ -314,7 +332,23 @@ def render_ui():
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-            // 2026학년도 교과목별 실습지 데이터베이스 매핑
+            // 암호 검증 함수 (ansan king)
+            function verifyPassword() {
+                const pwd = document.getElementById('authPassword').value;
+                if (pwd === 'ansan king') {
+                    document.getElementById('authOverlay').style.display = 'none';
+                    sessionStorage.setItem('authenticated', 'true');
+                } else {
+                    document.getElementById('authError').style.display = 'block';
+                }
+            }
+
+            // 세션 유지 확인
+            if (sessionStorage.getItem('authenticated') === 'true') {
+                document.getElementById('authOverlay').style.display = 'none';
+            }
+
+            // 2026학년도 교과목별 실습지 데이터베이스
             const hospitalDB = {
                 "성인I": [
                     "중앙대학교 광명병원", "가톨릭대학교 부천성모병원", "가톨릭대학교 성빈센트병원",
