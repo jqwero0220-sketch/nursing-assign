@@ -8,17 +8,13 @@ import asyncio
 import io
 import uvicorn
 
-# Scikit-learn 및 SciPy 최적화 라이브러리
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v5.0 (High-Performance Engine)")
+app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v5.1")
 
 SECRET_PASSWORD = "ansan king"
 
-# -------------------------------------------------------------------
-# 🚀 In-Memory Caching & Route Engine
-# -------------------------------------------------------------------
 ROUTE_CACHE: Dict[str, Tuple[int, int, int]] = {}
 
 def get_cached_route_info(address: str, station: str, mode_raw: str, default_time: int) -> Tuple[int, int, int]:
@@ -32,9 +28,6 @@ def get_cached_route_info(address: str, station: str, mode_raw: str, default_tim
     ROUTE_CACHE[cache_key] = result
     return result
 
-# -------------------------------------------------------------------
-# 🤖 Machine Learning Model (RandomForest)
-# -------------------------------------------------------------------
 class SatisfactionMLModel:
     def __init__(self):
         self.model = RandomForestClassifier(n_estimators=50, random_state=42)
@@ -74,9 +67,6 @@ class SatisfactionMLModel:
 
 ml_engine = SatisfactionMLModel()
 
-# -------------------------------------------------------------------
-# 🧠 AI Report Generator
-# -------------------------------------------------------------------
 def generate_ai_report(name: str, hospital: str, rank: Optional[int], mfi: float, travel_time: int, transit_mode: str, gpa: float, is_eligible: bool, note: str) -> str:
     if not is_eligible:
         return f"[AI 분석] {name} 학생은 {note}로 인해 {hospital} 배정 자격 미달로 판정되었습니다."
@@ -86,9 +76,6 @@ def generate_ai_report(name: str, hospital: str, rank: Optional[int], mfi: float
     report += f"GPA({gpa}) 기준 조건을 충족하여 통학 피로도 최소화 관점에서 최적의 배정안으로 평가됩니다."
     return report
 
-# -------------------------------------------------------------------
-# Data Models
-# -------------------------------------------------------------------
 class PasswordVerifyRequest(BaseModel):
     password: str
 
@@ -154,9 +141,6 @@ def check_eligibility(student: StudentInput, criteria: HospitalCriteria) -> tupl
 
     return True, "✅ 자격충족 & MFI 피로도 최적 배정 대상"
 
-# -------------------------------------------------------------------
-# API Endpoints
-# -------------------------------------------------------------------
 @app.post("/api/v1/verify-password")
 async def verify_password(payload: PasswordVerifyRequest):
     if payload.password == SECRET_PASSWORD:
@@ -295,53 +279,99 @@ def render_ui():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>로켓단 AI 실습지 최적 배정 시스템</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
-            body { font-family: 'Pretendard', sans-serif; background-color: #f7fafc; color: #2d3748; }
-            .navbar-custom { background-color: #1a365d; }
-            .card-custom { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-            .card-header-custom { background: #edf2f7; border-bottom: 2px solid #e2e8f0; font-weight: 700; color: #1a365d; border-radius: 12px 12px 0 0 !important; }
-            .btn-run { background-color: #2b6cb0; border: none; font-weight: 700; padding: 12px; font-size: 16px; border-radius: 8px; }
-            .btn-run:hover { background-color: #1a365d; }
-            .btn-excel { background-color: #2f855a; border: none; font-weight: 700; }
-            .btn-excel:hover { background-color: #22543d; }
-            .dropzone-box { border: 2px dashed #cbd5e0; background: #ffffff; border-radius: 8px; padding: 20px; text-align: center; }
-            .table-custom th { background-color: #1a365d; color: white; text-align: center; font-size: 13.5px; }
+            body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; }
+            .navbar-custom { background-color: #0f172a; border-bottom: 1px solid #1e293b; }
+            .card-custom { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); background: #ffffff; }
+            .card-header-custom { background: #f8fafc; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: #0f172a; border-radius: 16px 16px 0 0 !important; }
+            .btn-run { background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; font-weight: 700; padding: 12px; font-size: 15px; border-radius: 10px; transition: all 0.2s; }
+            .btn-run:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); transform: translateY(-1px); }
+            .btn-excel { background: linear-gradient(135deg, #059669, #047857); border: none; font-weight: 700; border-radius: 8px; }
+            .btn-excel:hover { background: linear-gradient(135deg, #047857, #065f46); }
+            .dropzone-box { border: 2px dashed #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 24px; text-align: center; }
+            .table-custom th { background-color: #0f172a; color: #f8fafc; text-align: center; font-size: 13.5px; font-weight: 600; }
             .table-custom td { vertical-align: middle; text-align: center; font-size: 13px; }
-            .pass-text { color: #2f855a; font-weight: bold; }
-            .fail-text { color: #e53e3e; font-weight: bold; }
-            .rank-badge { background-color: #d69e2e; color: white; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
-            .badge-mode { background-color: #e2e8f0; color: #2b6cb0; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
-            .mfi-badge { background-color: #ebf8ff; color: #2c5282; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: 1px solid #bee3f8; }
-            .ai-badge { background-color: #f0fff4; color: #276749; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: 1px solid #c6f6d5; }
+            .pass-text { color: #059669; font-weight: 700; }
+            .fail-text { color: #dc2626; font-weight: 700; }
+            .rank-badge { background: #d97706; color: white; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 11.5px; }
+            .badge-mode { background-color: #f1f5f9; color: #1e40af; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
+            .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: 1px solid #bfdbfe; }
+            .ai-badge { background-color: #ecfdf5; color: #047857; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: 1px solid #a7f3d0; }
             
-            .auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(26, 54, 93, 0.96); z-index: 9999; display: flex; justify-content: center; align-items: center; }
-            .auth-card { background: white; width: 90%; max-width: 420px; padding: 35px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); text-align: center; }
+            /* 🌟 모던 프리미엄 Glassmorphism 로그인 오버레이 */
+            .auth-overlay {
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%);
+                z-index: 9999; display: flex; justify-content: center; align-items: center;
+            }
+            .auth-card {
+                background: rgba(30, 41, 59, 0.7);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                width: 90%; max-width: 400px; padding: 40px 32px;
+                border-radius: 24px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+                text-align: center;
+                color: #ffffff;
+            }
+            .auth-icon {
+                width: 64px; height: 64px; background: rgba(59, 130, 246, 0.15);
+                border-radius: 20px; display: flex; align-items: center; justify-content: center;
+                margin: 0 auto 20px; font-size: 28px; border: 1px solid rgba(59, 130, 246, 0.3);
+            }
+            .auth-input {
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                color: #ffffff !important; border-radius: 12px;
+                padding: 14px; font-size: 15px; letter-spacing: 1px;
+                transition: all 0.25s ease;
+            }
+            .auth-input:focus {
+                background: rgba(15, 23, 42, 0.8);
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+                outline: none;
+            }
+            .auth-input::placeholder { color: #64748b; font-weight: 400; font-size: 14px; }
+            .btn-auth {
+                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                border: none; color: white; font-weight: 700;
+                padding: 14px; border-radius: 12px; font-size: 15px;
+                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+                transition: all 0.2s ease;
+            }
+            .btn-auth:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+            }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
     <body>
+        <!-- 🌟 개선된 모던 디자인 세션 인증 모달 -->
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
-                <div class="fs-1 mb-2">🔒</div>
-                <h4 class="fw-bold text-navy mb-1">시스템 서버 인증</h4>
-                <p class="text-muted fs-7 mb-4">개인정보 보호를 위해 관리자 암호를 입력해 주세요.</p>
+                <div class="auth-icon">🚀</div>
+                <h4 class="fw-bold mb-1" style="letter-spacing: -0.5px;">보안 서버 인증</h4>
+                <p class="text-secondary fs-7 mb-4" style="color: #94a3b8 !important;">로켓단 AI 실습지 최적 배정 시스템 v5.1</p>
                 <div class="mb-3">
-                    <input type="password" id="authPassword" class="form-control form-control-lg text-center fw-bold" placeholder="접속 암호 입력..." onkeyup="if(window.event.keyCode==13){verifyPassword();}">
-                    <div id="authError" class="text-danger fs-7 mt-2 fw-bold" style="display:none;">❌ 백엔드 인증 실패: 암호가 올바르지 않습니다.</div>
+                    <input type="password" id="authPassword" class="form-control auth-input text-center fw-semibold mb-2" placeholder="접속 암호를 입력하세요" onkeyup="if(window.event.keyCode==13){verifyPassword();}">
+                    <div id="authError" class="text-danger fs-7 fw-bold mt-2" style="display:none; color: #f87171 !important;">❌ 백엔드 인증 실패: 올바른 암호가 아닙니다.</div>
                 </div>
-                <button onclick="verifyPassword()" class="btn text-white w-100 btn-lg fw-bold" style="background-color: #2b6cb0;">
-                    백엔드 인증 및 시스템 접속
+                <button onclick="verifyPassword()" class="btn btn-auth w-100">
+                    시스템 접속하기
                 </button>
             </div>
         </div>
 
         <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
             <div class="container px-4">
-                <span class="navbar-brand mb-0 h1 fw-bold fs-5">
+                <span class="navbar-brand mb-0 h1 fw-bold fs-5" style="letter-spacing: -0.5px;">
                     🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템
                 </span>
-                <span class="badge bg-success fs-7">v5.0 Async & SciPy Engine</span>
+                <span class="badge bg-primary fs-7 px-3 py-2 rounded-pill">v5.1 Pro Engine</span>
             </div>
         </nav>
 
@@ -381,10 +411,10 @@ def render_ui():
                             </div>
 
                             <div class="accordion" id="advancedOptions">
-                                <div class="accordion-item border-0 bg-light rounded">
+                                <div class="accordion-item border-0 bg-light rounded-3">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed bg-light fw-bold text-secondary fs-7 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced">
-                                            ⚙️ 세부 자격 조건 및 알고리즘 모드
+                                            ⚙️ 세부 자격 조건 및 알고리즘 옵션
                                         </button>
                                     </h2>
                                     <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#advancedOptions">
