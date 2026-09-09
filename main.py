@@ -10,13 +10,10 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.0)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.1)")
 
 SECRET_PASSWORD = "ansan king"
 
-# -------------------------------------------------------------------
-# 수도권 법정동별 새벽 05:00 출근 대중교통 매트릭스 DB 엔진
-# -------------------------------------------------------------------
 def calculate_ultra_dense_transit(address: str, hospital: str) -> Tuple[int, int, int]:
     addr = str(address).strip()
     base_time = 35
@@ -273,7 +270,7 @@ def render_ui():
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.0)</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.1)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
                 <button onclick="verifyPassword()" class="btn btn-success w-100 fw-bold py-2">시스템 접속하기</button>
             </div>
@@ -282,7 +279,7 @@ def render_ui():
         <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
             <div class="container px-4">
                 <span class="navbar-brand fw-bold">간호학과 스마트 실습지 최적 배정 시스템</span>
-                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-1.0</span>
+                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-1.1</span>
             </div>
         </nav>
 
@@ -452,7 +449,8 @@ def render_ui():
                 currentHospital = data.target_hospital;
 
                 document.getElementById('summary_box').style.display = 'block';
-                document.getElementById('summary_text').innerHTML = `<b>배정 병원:</b> ${hospital} | <b>총 학생:</b> ${data.total_students}명 | <b>적격 배정:</b> <span class="text-success fw-bold">${data.eligible_count}명</span>`;
+                // '적격 배정' 단어 제거하고 총 학생수만 표시
+                document.getElementById('summary_text').innerHTML = `<b>배정 병원:</b> ${hospital} | <b>총 학생수:</b> ${data.total_students}명`;
 
                 let tbody = document.getElementById('result_body');
                 tbody.innerHTML = '';
@@ -460,10 +458,7 @@ def render_ui():
                     if(!r.is_eligible) return;
                     let tr = document.createElement('tr');
                     
-                    // MFI 툴팁 설명 (체감 피로도)
                     let mfiTooltip = `산출 공식: 통학시간(${r.travel_time_minutes}분) + (환승횟수 × 12.0) + (도보시간 × 1.2) = 총 피로도 지수 ${r.fatigue_index}`;
-                    
-                    // AI 만족도 툴팁 설명 (산출 근거)
                     let satTooltip = `산출 근거: 통학 소요시간(${r.travel_time_minutes}분), 환승 및 도보 피로도(MFI: ${r.fatigue_index}), 학업 성취도(GPA: ${r.gpa})를 종합하여 머신러닝(RandomForest) 모델로 예측한 만족도 점수(${r.ai_satisfaction_score}점)입니다.`;
 
                     tr.innerHTML = `
