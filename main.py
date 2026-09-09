@@ -11,7 +11,7 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v5.3")
+app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v5.4")
 
 SECRET_PASSWORD = "ansan king"
 
@@ -140,7 +140,7 @@ async def verify_password(payload: PasswordVerifyRequest):
     raise HTTPException(status_code=401, detail="비밀번호가 올바르지 않습니다.")
 
 async def process_student_row_async(row: pd.Series) -> StudentInput:
-    mode_raw = str(row.get('이동수단', '대중교통'))
+    mode_raw = str(row.get('이동수단', '대중교통')).strip()
     station_info = str(row.get('인근역', ''))
     address = str(row.get('주소', ''))
     default_time = int(row['소요시간_분'])
@@ -148,12 +148,15 @@ async def process_student_row_async(row: pd.Series) -> StudentInput:
     travel_time, transfers, walk_time = get_cached_route_info(address, station_info, mode_raw, default_time)
     mfi = calculate_fatigue_index(travel_time, transfers, walk_time)
 
+    # 💡 이동수단 정밀 분류 로직 반영
     if '버스' in mode_raw and ('전철' in mode_raw or '지하철' in mode_raw):
         detail_mode = '지하철+버스'
     elif '버스' in mode_raw:
         detail_mode = '시내/시외버스'
-    else:
+    elif '전철' in mode_raw or '지하철' in mode_raw:
         detail_mode = '지하철(전철)'
+    else:
+        detail_mode = mode_raw if mode_raw and mode_raw != 'nan' else '대중교통'
 
     return StudentInput(
         student_id=str(row['학번']),
@@ -288,7 +291,6 @@ def render_ui():
             .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe; cursor: help; }
             .ai-badge { background-color: #ecfdf5; color: #047857; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #a7f3d0; }
             
-            /* 툴팁 아이콘 스타일 */
             .info-icon {
                 display: inline-flex; align-items: center; justify-content: center;
                 width: 16px; height: 16px; border-radius: 50%; background-color: #3b82f6;
@@ -349,7 +351,7 @@ def render_ui():
             <div class="auth-card">
                 <div class="auth-icon">🚀</div>
                 <h4 class="fw-bold mb-1" style="letter-spacing: -0.5px;">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4" style="color: #94a3b8 !important;">로켓단 AI 실습지 최적 배정 시스템 v5.3</p>
+                <p class="text-secondary fs-7 mb-4" style="color: #94a3b8 !important;">로켓단 AI 실습지 최적 배정 시스템 v5.4</p>
                 <div class="mb-3">
                     <input type="password" id="authPassword" class="form-control auth-input text-center fw-semibold mb-2" placeholder="접속 암호를 입력하세요" onkeyup="if(window.event.keyCode==13){verifyPassword();}">
                     <div id="authError" class="text-danger fs-7 fw-bold mt-2" style="display:none; color: #f87171 !important;">❌ 백엔드 인증 실패: 올바른 암호가 아닙니다.</div>
@@ -365,7 +367,7 @@ def render_ui():
                 <span class="navbar-brand mb-0 h1 fw-bold fs-5" style="letter-spacing: -0.5px;">
                     🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템
                 </span>
-                <span class="badge bg-primary fs-7 px-3 py-2 rounded-pill">v5.3 UX Smart</span>
+                <span class="badge bg-primary fs-7 px-3 py-2 rounded-pill">v5.4 Transit Fixed</span>
             </div>
         </nav>
 
@@ -496,7 +498,6 @@ def render_ui():
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-            // Bootstrap Tooltip 전체 초기화 함수
             function initTooltips() {
                 var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                 var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -652,7 +653,7 @@ def render_ui():
                         tbody.appendChild(row);
                     });
                     document.getElementById('result_table').style.display = 'table';
-                    initTooltips(); // 새로 추가된 요약바 툴팁 반영
+                    initTooltips();
                 } catch (e) {
                     alert('서버 통신 오류가 발생했습니다.');
                 }
@@ -680,7 +681,7 @@ def render_ui():
 
                 const worksheet = XLSX.utils.json_to_sheet(exportData);
                 const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(worksheet, worksheet, "AI배정결과리포트");
+                XLSX.utils.book_append_sheet(workbook, worksheet, "AI배정결과리포트");
 
                 const filename = `${currentTargetHospital}_AI실습배정결과.xlsx`;
                 XLSX.writeFile(workbook, filename);
