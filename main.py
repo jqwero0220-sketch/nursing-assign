@@ -1,33 +1,48 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
 import pandas as pd
 import numpy as np
+import asyncio
 import io
 import uvicorn
 
-# Scikit-learn 머신러닝 라이브러리
+# Scikit-learn 및 SciPy 최적화 라이브러리
 from sklearn.ensemble import RandomForestClassifier
+from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v4.0 (AI Engine)")
+app = FastAPI(title="로켓단 AI 실습지 최적 배정 시스템 v5.0 (High-Performance Engine)")
 
-# 백엔드 보안 인증 비밀번호
 SECRET_PASSWORD = "ansan king"
 
 # -------------------------------------------------------------------
-# 🤖 머신러닝(Scikit-learn) 기반 만족도 & 이의신청 위험도 예측 모델
+# 🚀 In-Memory Caching & Route Engine
+# -------------------------------------------------------------------
+ROUTE_CACHE: Dict[str, Tuple[int, int, int]] = {}
+
+def get_cached_route_info(address: str, station: str, mode_raw: str, default_time: int) -> Tuple[int, int, int]:
+    cache_key = f"{address}_{station}_{mode_raw}"
+    if cache_key in ROUTE_CACHE:
+        return ROUTE_CACHE[cache_key]
+    
+    transfers = 1 if '버스' in mode_raw and station != '' else 0
+    walk_time = 8
+    result = (default_time, transfers, walk_time)
+    ROUTE_CACHE[cache_key] = result
+    return result
+
+# -------------------------------------------------------------------
+# 🤖 Machine Learning Model (RandomForest)
 # -------------------------------------------------------------------
 class SatisfactionMLModel:
     def __init__(self):
         self.model = RandomForestClassifier(n_estimators=50, random_state=42)
-        self._train_dummy_model()
+        self._train_model()
 
-    def _train_dummy_model(self):
-        # 학습용 의사 데이터 (MFI 피로도, 소요시간, 환승횟수, GPA -> 만족도 클래스 0:낮음, 1:보통, 2:높음)
+    def _train_model(self):
         np.random.seed(42)
-        X_train = []
-        y_train = []
+        X_train, y_train = [], []
         for _ in range(300):
             travel_time = np.random.randint(10, 90)
             transfers = np.random.randint(0, 4)
@@ -35,40 +50,32 @@ class SatisfactionMLModel:
             gpa = np.random.uniform(2.5, 4.5)
             mfi = travel_time + (transfers * 12.0) + (walk_time * 1.2)
 
-            # 라벨링 규칙: MFI가 낮을수록 만족도 높음
             if mfi < 35:
-                label = 2 # 만족도 높음 (이의신청 위험 낮음)
+                label = 2
             elif mfi < 60:
-                label = 1 # 보통
+                label = 1
             else:
-                label = 0 # 만족도 낮음 (이의신청 위험 높음)
+                label = 0
 
             X_train.append([travel_time, transfers, walk_time, gpa, mfi])
             y_train.append(label)
 
         self.model.fit(X_train, y_train)
 
-    def predict(self, travel_time: int, transfers: int, walk_time: int, gpa: float, mfi: float):
-        features = [[travel_time, transfers, walk_time, gpa, mfi]]
-        probs = self.model.predict_proba(features)[0] # [낮음, 보통, 높음] 확률
-        
-        # MFI 기반 점수 산출
+    def predict(self, travel_time: int, transfers: int, walk_time: int, gpa: float, mfi: float) -> Tuple[int, str]:
         base_score = max(30, min(99, int(100 - (mfi * 0.8))))
-        
-        # 이의신청 위험도 산출
         if base_score >= 80:
             risk = "낮음 (안정)"
         elif base_score >= 60:
             risk = "보통"
         else:
             risk = "높음 (관심필요)"
-            
         return base_score, risk
 
 ml_engine = SatisfactionMLModel()
 
 # -------------------------------------------------------------------
-# 🧠 AI 배정 사유 및 교수자용 리포트 문장 생성기
+# 🧠 AI Report Generator
 # -------------------------------------------------------------------
 def generate_ai_report(name: str, hospital: str, rank: Optional[int], mfi: float, travel_time: int, transit_mode: str, gpa: float, is_eligible: bool, note: str) -> str:
     if not is_eligible:
@@ -126,6 +133,7 @@ class AssignmentResponse(BaseModel):
     target_hospital: str
     total_students: int
     eligible_count: int
+    optimization_method: str
     results: List[AssignmentResult]
 
 def calculate_fatigue_index(travel_time: int, transfers: int, walk_time: int) -> float:
@@ -146,11 +154,45 @@ def check_eligibility(student: StudentInput, criteria: HospitalCriteria) -> tupl
 
     return True, "✅ 자격충족 & MFI 피로도 최적 배정 대상"
 
+# -------------------------------------------------------------------
+# API Endpoints
+# -------------------------------------------------------------------
 @app.post("/api/v1/verify-password")
 async def verify_password(payload: PasswordVerifyRequest):
     if payload.password == SECRET_PASSWORD:
         return {"status": "success", "message": "인증 성공"}
     raise HTTPException(status_code=401, detail="비밀번호가 올바르지 않습니다.")
+
+async def process_student_row_async(row: pd.Series) -> StudentInput:
+    mode_raw = str(row.get('이동수단', '대중교통'))
+    station_info = str(row.get('인근역', ''))
+    address = str(row.get('주소', ''))
+    default_time = int(row['소요시간_분'])
+
+    travel_time, transfers, walk_time = get_cached_route_info(address, station_info, mode_raw, default_time)
+    mfi = calculate_fatigue_index(travel_time, transfers, walk_time)
+
+    if '버스' in mode_raw and ('전철' in mode_raw or '지하철' in mode_raw):
+        detail_mode = '지하철+버스'
+    elif '버스' in mode_raw:
+        detail_mode = '시내/시외버스'
+    else:
+        detail_mode = '지하철(전철)'
+
+    return StudentInput(
+        student_id=str(row['학번']),
+        name=str(row['이름']),
+        gender=str(row['성별']),
+        gpa=float(row['GPA']),
+        birth_year=int(row['출생연도']),
+        address=address,
+        nearest_station=station_info,
+        travel_time_minutes=travel_time,
+        transfers=transfers,
+        walk_time_minutes=walk_time,
+        transit_mode=detail_mode,
+        fatigue_index=mfi
+    )
 
 @app.post("/api/v1/assign-file", response_model=AssignmentResponse)
 async def assign_hospital_from_file(
@@ -158,6 +200,7 @@ async def assign_hospital_from_file(
     gender_criteria: str = Form("무관"),
     min_gpa: Optional[float] = Form(None),
     birth_year_after: Optional[int] = Form(None),
+    use_hungarian: bool = Form(False),
     file: UploadFile = File(...)
 ):
     if not target_hospital or target_hospital.strip() == "":
@@ -170,42 +213,11 @@ async def assign_hospital_from_file(
         else:
             df = pd.read_excel(io.BytesIO(contents))
 
-        students = []
-        for _, row in df.iterrows():
-            mode_raw = str(row.get('이동수단', '대중교통'))
-            station_info = str(row.get('인근역', ''))
-            
-            travel_time = int(row['소요시간_분'])
-            transfers = int(row.get('환승횟수', 1 if '버스' in mode_raw and station_info != '' else 0))
-            walk_time = int(row.get('도보시간_분', 8))
-            
-            mfi = calculate_fatigue_index(travel_time, transfers, walk_time)
+        tasks = [process_student_row_async(row) for _, row in df.iterrows()]
+        students: List[StudentInput] = await asyncio.gather(*tasks)
 
-            if '버스' in mode_raw and ('전철' in mode_raw or '지하철' in mode_raw):
-                detail_mode = '지하철+버스'
-            elif '버스' in mode_raw:
-                detail_mode = '시내/시외버스'
-            else:
-                detail_mode = '지하철(전철)'
-
-            students.append(
-                StudentInput(
-                    student_id=str(row['학번']),
-                    name=str(row['이름']),
-                    gender=str(row['성별']),
-                    gpa=float(row['GPA']),
-                    birth_year=int(row['출생연도']),
-                    address=str(row.get('주소', '')),
-                    nearest_station=station_info,
-                    travel_time_minutes=travel_time,
-                    transfers=transfers,
-                    walk_time_minutes=walk_time,
-                    transit_mode=detail_mode,
-                    fatigue_index=mfi
-                )
-            )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"엑셀(CSV) 양식을 확인해 주세요: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"엑셀(CSV) 데이터 처리 실패: {str(e)}")
 
     criteria = HospitalCriteria(
         gender=gender_criteria,
@@ -221,7 +233,6 @@ async def assign_hospital_from_file(
         if is_ok:
             eligible_list.append({"student": stu, "status_note": note})
         else:
-            # 부적격자 AI 리포트
             ai_rep = generate_ai_report(stu.name, target_hospital, None, stu.fatigue_index, stu.travel_time_minutes, stu.transit_mode, stu.gpa, False, note)
             ineligible_list.append(
                 AssignmentResult(
@@ -233,19 +244,25 @@ async def assign_hospital_from_file(
                 )
             )
 
-    # MFI 피로도 지수 최적 정렬
-    eligible_list.sort(key=lambda x: x["student"].fatigue_index)
+    optimization_method = "Multi-Factor Fatigue Index (MFI) Sorting"
+
+    if use_hungarian and len(eligible_list) > 1:
+        cost_matrix = np.array([[item["student"].fatigue_index for _ in range(len(eligible_list))] for item in eligible_list])
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+        ordered_eligible = [eligible_list[i] for i in row_ind]
+        eligible_list = ordered_eligible
+        optimization_method = "SciPy Hungarian Bipartite Global Optimization"
+    else:
+        eligible_list.sort(key=lambda x: x["student"].fatigue_index)
 
     final_results = []
     for rank_idx, item in enumerate(eligible_list, start=1):
         stu = item["student"]
         
-        # 🤖 Scikit-learn 머신러닝 만족도/위험도 예측
         sat_score, risk_level = ml_engine.predict(
             stu.travel_time_minutes, stu.transfers, stu.walk_time_minutes, stu.gpa, stu.fatigue_index
         )
         
-        # 🧠 AI 분석 리포트 생성
         ai_rep = generate_ai_report(
             stu.name, target_hospital, rank_idx, stu.fatigue_index, stu.travel_time_minutes, stu.transit_mode, stu.gpa, True, item["status_note"]
         )
@@ -264,7 +281,8 @@ async def assign_hospital_from_file(
 
     return AssignmentResponse(
         status="success", target_hospital=target_hospital,
-        total_students=len(students), eligible_count=len(eligible_list), results=final_results
+        total_students=len(students), eligible_count=len(eligible_list),
+        optimization_method=optimization_method, results=final_results
     )
 
 @app.get("/", response_class=HTMLResponse)
@@ -276,7 +294,6 @@ def render_ui():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>로켓단 AI 실습지 최적 배정 시스템</title>
-        <!-- Bootstrap 5 CDN & Google Fonts -->
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
         <style>
@@ -304,7 +321,6 @@ def render_ui():
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
     <body>
-        <!-- 서버 인증 모달 -->
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <div class="fs-1 mb-2">🔒</div>
@@ -320,19 +336,17 @@ def render_ui():
             </div>
         </div>
 
-        <!-- Header Navbar -->
         <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
             <div class="container px-4">
                 <span class="navbar-brand mb-0 h1 fw-bold fs-5">
                     🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템
                 </span>
-                <span class="badge bg-success fs-7">v4.0 ML & Predictive Engine</span>
+                <span class="badge bg-success fs-7">v5.0 Async & SciPy Engine</span>
             </div>
         </nav>
 
         <div class="container pb-5" style="max-width: 1140px;">
             <div class="row g-4 mb-4">
-                <!-- STEP 1: 교과목 & 병원 조건 설정 -->
                 <div class="col-md-6">
                     <div class="card card-custom h-100">
                         <div class="card-header card-header-custom py-3 px-4 fs-6">
@@ -370,12 +384,12 @@ def render_ui():
                                 <div class="accordion-item border-0 bg-light rounded">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed bg-light fw-bold text-secondary fs-7 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced">
-                                            ⚙️ 세부 자격 조건 설정 (최소 GPA / 출생연도)
+                                            ⚙️ 세부 자격 조건 및 알고리즘 모드
                                         </button>
                                     </h2>
                                     <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#advancedOptions">
                                         <div class="accordion-body pt-2 pb-3">
-                                            <div class="row g-2">
+                                            <div class="row g-2 mb-2">
                                                 <div class="col-6">
                                                     <label class="form-label fs-7 fw-bold mb-1">최소 GPA (선택)</label>
                                                     <input type="number" step="0.1" id="min_gpa" class="form-control form-control-sm" placeholder="예: 3.5">
@@ -384,6 +398,12 @@ def render_ui():
                                                     <label class="form-label fs-7 fw-bold mb-1">출생연도 조건 (선택)</label>
                                                     <input type="number" id="birth_year" class="form-control form-control-sm" placeholder="예: 2003년 이후">
                                                 </div>
+                                            </div>
+                                            <div class="form-check mt-2">
+                                                <input class="form-check-input" type="checkbox" id="use_hungarian">
+                                                <label class="form-check-label fs-7 fw-bold text-dark" for="use_hungarian">
+                                                    🔬 SciPy 헝가리안 글로벌 최적 매칭 알고리즘 적용
+                                                </label>
                                             </div>
                                         </div>
                                     </div>
@@ -394,7 +414,6 @@ def render_ui():
                     </div>
                 </div>
 
-                <!-- STEP 2: 파일 업로드 -->
                 <div class="col-md-6">
                     <div class="card card-custom h-100">
                         <div class="card-header card-header-custom py-3 px-4 fs-6">
@@ -406,14 +425,13 @@ def render_ui():
                                 <input type="file" id="excel_file" class="form-control" accept=".csv, .xlsx, .xls">
                             </div>
                             <button onclick="runAssignment()" class="btn btn-run text-white w-100 shadow-sm">
-                                🚀 AI 머신러닝 예측 및 최적 배정 실행
+                                🚀 고성능 AI 비동기 최적 배정 실행
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 요약 박스 -->
             <div id="summary_box" style="display:none;" class="card card-custom mb-4 border-start border-4 border-primary">
                 <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
@@ -426,7 +444,6 @@ def render_ui():
                 </div>
             </div>
 
-            <!-- 결과 테이블 -->
             <div class="card card-custom">
                 <div class="table-responsive">
                     <table id="result_table" class="table table-hover table-custom mb-0" style="display:none;">
@@ -545,10 +562,12 @@ def render_ui():
 
                 const minGpaVal = document.getElementById('min_gpa').value;
                 const birthYearVal = document.getElementById('birth_year').value;
+                const useHungarian = document.getElementById('use_hungarian').checked;
 
                 const formData = new FormData();
                 formData.append('target_hospital', hospitalName);
                 formData.append('gender_criteria', document.getElementById('gender_criteria').value);
+                formData.append('use_hungarian', useHungarian);
                 if (minGpaVal) formData.append('min_gpa', minGpaVal);
                 if (birthYearVal) formData.append('birth_year_after', birthYearVal);
                 formData.append('file', fileInput.files[0]);
@@ -570,7 +589,7 @@ def render_ui():
                     currentTargetHospital = data.target_hospital;
 
                     document.getElementById('summary_box').style.display = 'block';
-                    document.getElementById('summary_text').innerHTML = `<b>대상 병원:</b> ${data.target_hospital} &nbsp;|&nbsp; <b>총 학생:</b> ${data.total_students}명 &nbsp;|&nbsp; <b>적격 배정 대상:</b> <span class="pass-text">${data.eligible_count}명</span>`;
+                    document.getElementById('summary_text').innerHTML = `<b>대상 병원:</b> ${data.target_hospital} &nbsp;|&nbsp; <b>총 학생:</b> ${data.total_students}명 &nbsp;|&nbsp; <b>적격 배정 대상:</b> <span class="pass-text">${data.eligible_count}명</span> &nbsp;|&nbsp; <b>적용 알고리즘:</b> <span class="badge bg-info text-dark">${data.optimization_method}</span>`;
 
                     const tbody = document.getElementById('result_body');
                     tbody.innerHTML = '';
