@@ -10,11 +10,10 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-2.0)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-2.1)")
 
 SECRET_PASSWORD = "ansan king"
 
-# 1. 교수님 최신 데이터 기반 학년도/학기/교과목별 병원 맵핑 DB 구축
 MASTER_HOSPITAL_DB = {
     "2026": {
         "1학기": {
@@ -169,7 +168,6 @@ async def verify_password(payload: PasswordVerifyRequest):
 async def get_hospitals(year: str, semester: str, subject: str):
     try:
         if subject == "ALL":
-            # 해당 학기의 모든 병원 중복 제거 합치기
             all_list = []
             for s in MASTER_HOSPITAL_DB.get(year, {}).get(semester, {}).values():
                 all_list.extend(s)
@@ -228,13 +226,11 @@ async def assign_hospital_from_file(
     for stu in students:
         is_ok, note = True, "자격충족"
         
-        # 1. 자격 조건 검증
         if gender_criteria == "남성만" and stu["gender"] != "남": is_ok, note = False, "성별 불일치"
         elif gender_criteria == "여성만" and stu["gender"] != "여": is_ok, note = False, "성별 불일치"
         if min_gpa and stu["gpa"] < min_gpa: is_ok, note = False, "성적 미달"
         if birth_year_after and stu["birth_year"] < birth_year_after: is_ok, note = False, "연령 미달"
         
-        # 2. 과거 실습지 중복 제외 검증 (교수님 피드백 반영)
         if exclude_past_hospital and target_hospital in stu["past_hospital"]:
             is_ok, note = False, "과거 실습 이력 중복"
 
@@ -301,7 +297,8 @@ def render_ui():
             .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe; }
             .auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%); z-index: 9999; display: flex; justify-content: center; align-items: center; }
             .auth-card { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(20px); width: 90%; max-width: 400px; padding: 40px 32px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; color: white; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
-            .auth-input { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.15); color: white !important; border-radius: 12px; padding: 14px; text-align: center; }
+            /* 비밀번호 입력창 글자 색상을 검정색으로 확실하게 변경 */
+            .auth-input { background: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.15); color: #000000 !important; font-weight: 700; border-radius: 12px; padding: 14px; text-align: center; }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
@@ -309,7 +306,7 @@ def render_ui():
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-2.0)</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-2.1)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
                 <button onclick="verifyPassword()" class="btn btn-success w-100 fw-bold py-2">시스템 접속하기</button>
             </div>
@@ -318,7 +315,7 @@ def render_ui():
         <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
             <div class="container px-4">
                 <span class="navbar-brand fw-bold">로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
-                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-2.0 (교수님 피드백 반영)</span>
+                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-2.1</span>
             </div>
         </nav>
 
@@ -367,7 +364,7 @@ def render_ui():
                                 <div class="accordion-item border-0 bg-light rounded-3">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed bg-light fw-bold text-secondary fs-7 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced">
-                                            세부 자격 조건 및 알고리즘 옵션 설정 (피드백 반영)
+                                            세부 자격 조건 및 알고리즘 옵션 설정
                                         </button>
                                     </h2>
                                     <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#advancedOptions">
