@@ -10,9 +10,66 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.2)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-2.0)")
 
 SECRET_PASSWORD = "ansan king"
+
+# 1. 교수님 최신 데이터 기반 학년도/학기/교과목별 병원 맵핑 DB 구축
+MASTER_HOSPITAL_DB = {
+    "2026": {
+        "1학기": {
+            "성인I": [
+                "가톨릭대학교 부천성모병원", "가톨릭대학교 성빈센트병원", "고려대학교 안산병원", 
+                "순천향대학교부천병원", "순천향대학교서울병원", "용인세브란스병원", 
+                "인천기독병원", "중앙대학교광명병원(방중)", "한림대학교성심병원"
+            ],
+            "여성": [
+                "가톨릭대학교 부천성모병원", "군포지샘병원", "봄빛병원(방중~)", 
+                "순천향대학교서울병원", "우성여성병원", "의왕성모병원(방중~)", 
+                "인하대학교병원(방중)", "중앙대학교광명병원(방중)", "한빛병원"
+            ],
+            "성인Ⅲ": [
+                "가톨릭대학교 부천성모병원", "부천세종병원", "사랑의병원", 
+                "순천향대학교부천병원", "아주대학교병원", "인천기독병원", 
+                "인하대학교병원(방중)", "중앙대학교광명병원(방중)", "한림대학교성심병원"
+            ],
+            "관리": [
+                "고려대학교구로병원", "단원병원", "서울특별시 서남병원", 
+                "센트럴병원", "순천향대학교부천병원", "순천향대학교서울병원", 
+                "시화병원", "중앙대학교광명병원(방중)"
+            ],
+            "지역": [
+                "근로복지공단안산병원", "단원보건소", "상록수보건소", 
+                "센트럴병원", "엘지이노텍"
+            ]
+        },
+        "2학기": {
+            "성인Ⅱ": [
+                "가톨릭대학교 부천성모병원", "가톨릭대학교 성빈센트병원", "고려대학교안산병원", 
+                "사랑의병원", "순천향대학교부천병원", "순천향대학교서울병원", 
+                "아주대학교병원", "인하대학교병원(방중)", "한도병원", "한림대학교성심병원"
+            ],
+            "정신": [
+                "가톨릭대학교 성빈센트병원", "계요병원", "군포시정신건강복지센터", 
+                "안산시정신건강복지센터", "안산시중독관리통합지원센터", "의왕시정신건강복지센터", "이음병원"
+            ],
+            "아동": [
+                "단원병원", "순천향대학교서울병원", "시화병원", "아이원병원", 
+                "웰봄병원", "부천서울어린이병원"
+            ],
+            "성인Ⅳ": [
+                "가톨릭대학교 부천성모병원", "단원병원", "사랑의병원", 
+                "순천향대학교부천병원", "순천향대학교서울병원", "안양샘병원", 
+                "용인세브란스병원", "인천기독병원", "인천세종병원"
+            ],
+            "종합": [
+                "단원보건소", "단원병원", "마음건강센터", "상록수보건소", 
+                "순천향대학교서울병원", "시화병원", "안산시정신건강복지센터", 
+                "용인세브란스병원", "우성여성병원", "중앙대학교광명병원(방중)"
+            ]
+        }
+    }
+}
 
 def calculate_ultra_dense_transit(address: str, hospital: str) -> Tuple[int, int, int]:
     addr = str(address).strip()
@@ -38,14 +95,12 @@ def calculate_ultra_dense_transit(address: str, hospital: str) -> Tuple[int, int
         if "산본동" in addr: base_time = 45; transfers = 1; walk_time = 10
         elif "금정동" in addr: base_time = 42; transfers = 1; walk_time = 9
         elif "당동" in addr: base_time = 48; transfers = 1; walk_time = 12
-        elif "부곡동" in addr: base_time = 52; transfers = 2; walk_time = 14
         else: base_time = 46
     elif "수원시" in addr:
         transfers = 2
         if "팔달구" in addr: base_time = 50; walk_time = 12
         elif "권선구" in addr: base_time = 58; walk_time = 14
         elif "영통구" in addr: base_time = 65; walk_time = 15
-        elif "장안구" in addr: base_time = 55; walk_time = 13
         else: base_time = 55
     elif "부천시" in addr:
         transfers = 1
@@ -54,19 +109,13 @@ def calculate_ultra_dense_transit(address: str, hospital: str) -> Tuple[int, int
     elif "안양시" in addr:
         transfers = 1
         if "동안구" in addr: base_time = 40; walk_time = 9
-        elif "만안구" in addr: base_time = 44; walk_time = 11
         else: base_time = 42
 
-    if "광명병원" in hospital:
-        base_time += 12
-    elif "인하대병원" in hospital:
-        base_time += 18; transfers = 2
-    elif "성빈센트병원" in hospital:
-        base_time += 8
-    elif "고려대학교 안산병원" in hospital:
-        base_time += 0
-    elif "계요병원" in hospital:
-        base_time += 10
+    if "광명병원" in hospital: base_time += 12
+    elif "인하대" in hospital: base_time += 18; transfers = 2
+    elif "성빈센트병원" in hospital: base_time += 8
+    elif "고려대학교안산병원" in hospital or "고려대학교구로병원" in hospital: base_time += 0
+    elif "계요병원" in hospital: base_time += 10
 
     return (int(base_time), int(transfers), int(walk_time))
 
@@ -102,50 +151,34 @@ def generate_ai_report(name: str, hospital: str, rank: Optional[int], mfi: float
 class PasswordVerifyRequest(BaseModel):
     password: str
 
-class HospitalCriteria(BaseModel):
-    gender: str = Field(default="무관")
-    min_gpa: Optional[float] = Field(default=None)
-    birth_year_after: Optional[int] = Field(default=None)
-
-class StudentInput(BaseModel):
-    student_id: str
-    name: str
-    gender: str
-    gpa: float
-    birth_year: int
-    address: str
-    travel_time_minutes: int
-    transfers: int
-    walk_time_minutes: int
-    fatigue_index: float
-
-class AssignmentResult(BaseModel):
-    rank: Optional[int]
-    student_id: str
-    name: str
-    gender: str
-    gpa: float
-    birth_year: int
-    address: str
-    travel_time_minutes: Optional[int]
-    fatigue_index: Optional[float]
-    ai_satisfaction_score: Optional[int]
-    ai_report: str
-    is_eligible: bool
-
 class AssignmentResponse(BaseModel):
     status: str
     target_hospital: str
     total_students: int
     eligible_count: int
     optimization_method: str
-    results: List[AssignmentResult]
+    results: list
 
 @app.post("/api/v1/verify-password")
 async def verify_password(payload: PasswordVerifyRequest):
     if payload.password == SECRET_PASSWORD:
         return {"status": "success", "message": "인증 성공"}
     raise HTTPException(status_code=401, detail="비밀번호가 올바르지 않습니다.")
+
+@app.get("/api/v1/hospitals")
+async def get_hospitals(year: str, semester: str, subject: str):
+    try:
+        if subject == "ALL":
+            # 해당 학기의 모든 병원 중복 제거 합치기
+            all_list = []
+            for s in MASTER_HOSPITAL_DB.get(year, {}).get(semester, {}).values():
+                all_list.extend(s)
+            return {"hospitals": list(set(all_list))}
+        else:
+            h_list = MASTER_HOSPITAL_DB.get(year, {}).get(semester, {}).get(subject, [])
+            return {"hospitals": h_list}
+    except Exception:
+        return {"hospitals": []}
 
 @app.post("/api/v1/assign-file", response_model=AssignmentResponse)
 async def assign_hospital_from_file(
@@ -154,6 +187,7 @@ async def assign_hospital_from_file(
     min_gpa: Optional[float] = Form(None),
     birth_year_after: Optional[int] = Form(None),
     use_hungarian: bool = Form(False),
+    exclude_past_hospital: bool = Form(False),
     file: UploadFile = File(...)
 ):
     if not target_hospital:
@@ -166,70 +200,76 @@ async def assign_hospital_from_file(
         students = []
         for _, row in df.iterrows():
             address = str(row.get('주소', ''))
+            past_hospital = str(row.get('과거실습지', ''))
             travel_time, transfers, walk_time = calculate_ultra_dense_transit(address, target_hospital)
             
             unique_offset = (hash(str(row['학번'])) % 5) - 2
             travel_time = max(15, travel_time + unique_offset)
-            
             mfi = round(travel_time + (transfers * 12.0) + (walk_time * 1.2), 1)
 
-            students.append(StudentInput(
-                student_id=str(row['학번']),
-                name=str(row['이름']),
-                gender=str(row['성별']),
-                gpa=float(row['GPA']),
-                birth_year=int(row['출생연도']),
-                address=address,
-                travel_time_minutes=travel_time,
-                transfers=transfers,
-                walk_time_minutes=walk_time,
-                fatigue_index=mfi
-            ))
+            students.append({
+                "student_id": str(row['학번']),
+                "name": str(row['이름']),
+                "gender": str(row['성별']),
+                "gpa": float(row['GPA']),
+                "birth_year": int(row['출생연도']),
+                "address": address,
+                "past_hospital": past_hospital,
+                "travel_time_minutes": travel_time,
+                "transfers": transfers,
+                "walk_time_minutes": walk_time,
+                "fatigue_index": mfi
+            })
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"데이터 처리 실패: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"데이터 처리 실패 (엑셀 양식을 확인하세요): {str(e)}")
 
-    criteria = HospitalCriteria(gender=gender_criteria, min_gpa=min_gpa, birth_year_after=birth_year_after)
     eligible_list, ineligible_list = [], []
 
     for stu in students:
         is_ok, note = True, "자격충족"
-        if criteria.gender == "남성만" and stu.gender != "남": is_ok, note = False, "성별 불일치"
-        elif criteria.gender == "여성만" and stu.gender != "여": is_ok, note = False, "성별 불일치"
-        if criteria.min_gpa and stu.gpa < criteria.min_gpa: is_ok, note = False, "성적 미달"
-        if criteria.birth_year_after and stu.birth_year < criteria.birth_year_after: is_ok, note = False, "연령 미달"
+        
+        # 1. 자격 조건 검증
+        if gender_criteria == "남성만" and stu["gender"] != "남": is_ok, note = False, "성별 불일치"
+        elif gender_criteria == "여성만" and stu["gender"] != "여": is_ok, note = False, "성별 불일치"
+        if min_gpa and stu["gpa"] < min_gpa: is_ok, note = False, "성적 미달"
+        if birth_year_after and stu["birth_year"] < birth_year_after: is_ok, note = False, "연령 미달"
+        
+        # 2. 과거 실습지 중복 제외 검증 (교수님 피드백 반영)
+        if exclude_past_hospital and target_hospital in stu["past_hospital"]:
+            is_ok, note = False, "과거 실습 이력 중복"
 
         if is_ok:
             eligible_list.append({"student": stu, "status_note": note})
         else:
-            ai_rep = generate_ai_report(stu.name, target_hospital, None, stu.fatigue_index, stu.travel_time_minutes, False, note)
-            ineligible_list.append(AssignmentResult(
-                rank=None, student_id=stu.student_id, name=stu.name, gender=stu.gender,
-                gpa=stu.gpa, birth_year=stu.birth_year, address=stu.address,
-                travel_time_minutes=None, fatigue_index=None, ai_satisfaction_score=None,
-                ai_report=ai_rep, is_eligible=False
-            ))
+            ai_rep = generate_ai_report(stu["name"], target_hospital, None, stu["fatigue_index"], stu["travel_time_minutes"], False, note)
+            ineligible_list.append({
+                "rank": None, "student_id": stu["student_id"], "name": stu["name"], "gender": stu["gender"],
+                "gpa": stu["gpa"], "birth_year": stu["birth_year"], "address": stu["address"],
+                "travel_time_minutes": None, "fatigue_index": None, "ai_satisfaction_score": None,
+                "ai_report": ai_rep, "is_eligible": False
+            })
 
     optimization_method = "Transit DB & MFI Sorting"
     if use_hungarian and len(eligible_list) > 1:
-        cost_matrix = np.array([[item["student"].fatigue_index for _ in range(len(eligible_list))] for item in eligible_list])
+        cost_matrix = np.array([[item["student"]["fatigue_index"] for _ in range(len(eligible_list))] for item in eligible_list])
         row_ind, _ = linear_sum_assignment(cost_matrix)
         eligible_list = [eligible_list[i] for i in row_ind]
         optimization_method = "Transit DB & SciPy Hungarian Optimization"
     else:
-        eligible_list.sort(key=lambda x: x["student"].fatigue_index)
+        eligible_list.sort(key=lambda x: x["student"]["fatigue_index"])
 
     final_results = []
     for rank_idx, item in enumerate(eligible_list, start=1):
         stu = item["student"]
-        sat_score = ml_engine.predict(stu.travel_time_minutes, stu.transfers, stu.walk_time_minutes, stu.gpa, stu.fatigue_index)
-        ai_rep = generate_ai_report(stu.name, target_hospital, rank_idx, stu.fatigue_index, stu.travel_time_minutes, True, item["status_note"])
+        sat_score = ml_engine.predict(stu["travel_time_minutes"], stu["transfers"], stu["walk_time_minutes"], stu["gpa"], stu["fatigue_index"])
+        ai_rep = generate_ai_report(stu["name"], target_hospital, rank_idx, stu["fatigue_index"], stu["travel_time_minutes"], True, item["status_note"])
 
-        final_results.append(AssignmentResult(
-            rank=rank_idx, student_id=stu.student_id, name=stu.name, gender=stu.gender,
-            gpa=stu.gpa, birth_year=stu.birth_year, address=stu.address,
-            travel_time_minutes=stu.travel_time_minutes, fatigue_index=stu.fatigue_index,
-            ai_satisfaction_score=sat_score, ai_report=ai_rep, is_eligible=True
-        ))
+        final_results.append({
+            "rank": rank_idx, "student_id": stu["student_id"], "name": stu["name"], "gender": stu["gender"],
+            "gpa": stu["gpa"], "birth_year": stu["birth_year"], "address": stu["address"],
+            "travel_time_minutes": stu["travel_time_minutes"], "fatigue_index": stu["fatigue_index"],
+            "ai_satisfaction_score": sat_score, "ai_report": ai_rep, "is_eligible": True
+        })
 
     final_results.extend(ineligible_list)
     return AssignmentResponse(
@@ -269,7 +309,7 @@ def render_ui():
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-1.2)</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-2.0)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
                 <button onclick="verifyPassword()" class="btn btn-success w-100 fw-bold py-2">시스템 접속하기</button>
             </div>
@@ -277,8 +317,8 @@ def render_ui():
 
         <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
             <div class="container px-4">
-                <span class="navbar-brand fw-bold">간호학과 스마트 실습지 최적 배정 시스템</span>
-                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-1.2</span>
+                <span class="navbar-brand fw-bold">로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
+                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-2.0 (교수님 피드백 반영)</span>
             </div>
         </nav>
 
@@ -288,15 +328,35 @@ def render_ui():
                     <div class="card card-custom h-100">
                         <div class="card-header card-header-custom py-3 px-4">실습 교과목 및 병원 조건 설정</div>
                         <div class="card-body p-4">
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label fw-bold fs-7">학년도</label>
+                                    <select id="year_select" class="form-select form-select-sm fw-bold" onchange="updateHospitals()">
+                                        <option value="2026">2026학년도</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold fs-7">학기 선택</label>
+                                    <select id="semester_select" class="form-select form-select-sm fw-bold text-primary" onchange="updateHospitals()">
+                                        <option value="1학기">1학기</option>
+                                        <option value="2학기" selected>2학기</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="mb-3">
                                 <label class="form-label fw-bold">실습 교과목 선택</label>
-                                <select id="subject_select" class="form-select fw-bold text-success" onchange="updateHospitalOptions()">
+                                <select id="subject_select" class="form-select fw-bold text-success" onchange="updateHospitals()">
                                     <option value="ALL">전체 교과목 병원 통합</option>
                                     <option value="성인I">성인간호학실습 I</option>
                                     <option value="여성">여성건강간호학실습</option>
-                                    <option value="성인II">성인간호학실습 II</option>
-                                    <option value="아동">아동간호학실습</option>
+                                    <option value="성인Ⅲ">성인간호학실습 Ⅲ</option>
+                                    <option value="관리">간호관리학실습</option>
+                                    <option value="지역">지역사회간호학실습</option>
+                                    <option value="성인Ⅱ">성인간호학실습 Ⅱ</option>
                                     <option value="정신">정신간호학실습</option>
+                                    <option value="아동">아동간호학실습</option>
+                                    <option value="성인Ⅳ">성인간호학실습 Ⅳ</option>
+                                    <option value="종합">종합실습</option>
                                 </select>
                             </div>
                             <div class="mb-3">
@@ -307,7 +367,7 @@ def render_ui():
                                 <div class="accordion-item border-0 bg-light rounded-3">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed bg-light fw-bold text-secondary fs-7 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced">
-                                            세부 자격 조건 및 알고리즘 옵션 설정
+                                            세부 자격 조건 및 알고리즘 옵션 설정 (피드백 반영)
                                         </button>
                                     </h2>
                                     <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#advancedOptions">
@@ -330,6 +390,12 @@ def render_ui():
                                                     <input type="number" id="birth_year" class="form-control form-control-sm" placeholder="예: 2003">
                                                 </div>
                                             </div>
+                                            <div class="form-check mt-2" title="학생의 과거 실습 이력과 현재 배정 병원이 겹치는 경우 배정 대상에서 자동 제외합니다.">
+                                                <input class="form-check-input" type="checkbox" id="exclude_past_hospital">
+                                                <label class="form-check-label fs-7 fw-bold text-dark" for="exclude_past_hospital">
+                                                    과거 실습 기관 중복 배정 자동 제외
+                                                </label>
+                                            </div>
                                             <div class="form-check mt-2" title="전체 학생의 통학 피로도 총합이 최소가 되도록 수학적으로 최적 매칭을 수행합니다.">
                                                 <input class="form-check-input" type="checkbox" id="use_hungarian">
                                                 <label class="form-check-label fs-7 fw-bold text-dark" for="use_hungarian">
@@ -348,7 +414,8 @@ def render_ui():
                         <div class="card-header card-header-custom py-3 px-4">학생 명단 업로드</div>
                         <div class="card-body p-4 d-flex flex-column justify-content-between">
                             <div class="border border-2 border-dashed rounded-3 p-4 text-center bg-light mb-3">
-                                <p class="fw-bold mb-2">학번, 이름, 성별, GPA, 출생연도, 주소</p>
+                                <p class="fw-bold mb-1 text-dark">엑셀 컬럼 형식</p>
+                                <p class="text-secondary small mb-2">학번, 이름, 성별, GPA, 출생연도, 주소, 과거실습지</p>
                                 <input type="file" id="excel_file" class="form-control" accept=".csv, .xlsx">
                             </div>
                             <button onclick="runAssignment()" class="btn btn-run w-100 shadow-sm">
@@ -402,26 +469,29 @@ def render_ui():
             }
             if(sessionStorage.getItem('auth')==='true') document.getElementById('authOverlay').style.display='none';
 
-            const hospitalDB = {
-                "성인I": ["중앙대학교 광명병원", "가톨릭대학교 부천성모병원", "가톨릭대학교 성빈센트병원", "고려대학교 안산병원", "순천향대학교 부천병원"],
-                "여성": ["인하대병원", "봄빛병원", "우성병원", "지샘병원"],
-                "성인II": ["인하대병원", "아주대학교 병원", "한림대학교 성심병원"],
-                "아동": ["아이원병원", "웰봄병원", "단원병원"],
-                "정신": ["계요병원", "이음병원", "안산시 정신건강복지센터"]
-            };
-
-            function updateHospitalOptions() {
+            async function updateHospitals() {
+                let year = document.getElementById('year_select').value;
+                let sem = document.getElementById('semester_select').value;
                 let sub = document.getElementById('subject_select').value;
+
+                let res = await fetch(`/api/v1/hospitals?year=${year}&semester=${sem}&subject=${sub}`);
+                let data = await res.json();
+                
                 let box = document.getElementById('hospital_select');
                 box.innerHTML = '';
-                let list = sub === 'ALL' ? Object.values(hospitalDB).flat() : (hospitalDB[sub] || []);
-                list.forEach(h => {
+                if(data.hospitals && data.hospitals.length > 0) {
+                    data.hospitals.sort().forEach(h => {
+                        let opt = document.createElement('option');
+                        opt.value = h; opt.textContent = h;
+                        box.appendChild(opt);
+                    });
+                } else {
                     let opt = document.createElement('option');
-                    opt.value = h; opt.textContent = h;
+                    opt.value = ""; opt.textContent = "해당 조건의 병원이 없습니다";
                     box.appendChild(opt);
-                });
+                }
             }
-            window.onload = updateHospitalOptions;
+            window.onload = updateHospitals;
 
             let currentResults = [], currentHospital = "";
 
@@ -429,11 +499,14 @@ def render_ui():
                 let hospital = document.getElementById('hospital_select').value;
                 let file = document.getElementById('excel_file').files[0];
                 if(!file) { alert('학생 명단 엑셀 파일을 선택하세요.'); return; }
+                if(!hospital) { alert('배정 대상 병원을 올바르게 선택해주세요.'); return; }
 
                 let form = new FormData();
                 form.append('target_hospital', hospital);
                 form.append('gender_criteria', document.getElementById('gender_criteria').value);
                 form.append('use_hungarian', document.getElementById('use_hungarian').checked);
+                form.append('exclude_past_hospital', document.getElementById('exclude_past_hospital').checked);
+                
                 let minGpa = document.getElementById('min_gpa').value;
                 let birthY = document.getElementById('birth_year').value;
                 if(minGpa) form.append('min_gpa', minGpa);
@@ -455,7 +528,6 @@ def render_ui():
                 data.results.forEach(r => {
                     if(!r.is_eligible) return;
                     let tr = document.createElement('tr');
-
                     tr.innerHTML = `
                         <td><span class="rank-badge">${r.rank}순위</span></td>
                         <td>${r.student_id}</td>
