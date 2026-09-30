@@ -10,61 +10,62 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-4.2)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-5.1)")
 
 SECRET_PASSWORD = "ansan king"
 
 MASTER_HOSPITAL_DB = {
-    "2026": {
+    "3학년": {
         "1학기": {
-            "성인I": [
+            "성인1": [
                 "가톨릭대학교 부천성모병원", "가톨릭대학교 성빈센트병원", "고려대학교 안산병원", 
                 "순천향대학교부천병원", "순천향대학교서울병원", "용인세브란스병원", 
                 "인천기독병원", "중앙대학교광명병원(방중)", "한림대학교성심병원"
             ],
             "여성": [
-                "가톨릭대학교 부천성모병원", "군포지샘병원", "봄빛병원(방중~)", 
-                "순천향대학교서울병원", "우성여성병원", "의왕성모병원(방중~)", 
-                "인하대학교병원(방중)", "중앙대학교광명병원(방중)", "한빛병원"
-            ],
-            "성인Ⅲ": [
-                "가톨릭대학교 부천성모병원", "부천세종병원", "사랑의병원", 
-                "순천향대학교부천병원", "아주대학교병원", "인천기독병원", 
-                "인하대학교병원(방중)", "중앙대학교광명병원(방중)", "한림대학교성심병원"
-            ],
-            "관리": [
-                "고려대학교구로병원", "단원병원", "서울특별시 서남병원", 
-                "센트럴병원", "순천향대학교부천병원", "순천향대학교서울병원", 
-                "시화병원", "중앙대학교광명병원(방중)"
-            ],
-            "지역": [
-                "근로복지공단안산병원", "단원보건소", "상록수보건소", 
-                "센트럴병원", "엘지이노텍"
+                "가톨릭대학교 부천성모병원", "군포지샘병원", "봄빛병원(방중)", 
+                "순천향대학교서울병원", "우성여성병원(방중)", "인하대학교병원(방중)", 
+                "중앙대학교광명병원(방중)", "한빛병원"
             ]
         },
         "2학기": {
-            "성인Ⅱ": [
+            "성인2": [
                 "가톨릭대학교 부천성모병원", "가톨릭대학교 성빈센트병원", "고려대학교안산병원", 
                 "사랑의병원", "순천향대학교부천병원", "순천향대학교서울병원", 
                 "아주대학교병원", "인하대학교병원(방중)", "한도병원", "한림대학교성심병원"
-            ],
-            "정신": [
-                "가톨릭대학교 성빈센트병원", "계요병원", "군포시정신건강복지센터", 
-                "안산시정신건강복지센터", "안산시중독관리통합지원센터", "의왕시정신건강복지센터", "이음병원"
             ],
             "아동": [
                 "단원병원", "순천향대학교서울병원", "시화병원", "아이원병원", 
                 "웰봄병원", "부천서울어린이병원"
             ],
-            "성인Ⅳ": [
-                "가톨릭대학교 부천성모병원", "단원병원", "사랑의병원", 
-                "순천향대학교부천병원", "순천향대학교서울병원", "안양샘병원", 
-                "용인세브란스병원", "인천기독병원", "인천세종병원"
+            "정신": [
+                "가톨릭대학교 성빈센트병원", "계요병원", "군포시정신건강복지센터", 
+                "안산시정신건강복지센터", "안산시중독관리통합지원센터", "의왕시정신건강복지센터", "이음병원"
+            ]
+        }
+    },
+    "4학년": {
+        "1학기": {
+            "성인3": [
+                "가톨릭대학교 부천성모병원", "부천세종병원", "사랑의병원", 
+                "순천향대학교부천병원", "아주대학교병원", "인천기독병원", 
+                "인하대학교병원(방중)", "중앙대학교광명병원(방중)", "한림대학교성심병원"
             ],
+            "지역": [
+                "근로복지공단안산병원", "단원보건소", "상록수보건소", 
+                "센트럴병원", "엘지이노텍"
+            ],
+            "관리": [
+                "고려대학교구로병원", "단원병원", "서울특별시 서남병원", 
+                "센트럴병원", "순천향대학교부천병원", "순천향대학교서울병원", 
+                "시화병원", "중앙대학교광명병원(방중)"
+            ]
+        },
+        "2학기": {
             "종합": [
                 "단원보건소", "단원병원", "마음건강센터", "상록수보건소", 
                 "순천향대학교서울병원", "시화병원", "안산시정신건강복지센터", 
-                "용인세브란스병원", "우성여성병원", "중앙대학교광명병원(방중)"
+                "용인세브란스병원", "우성여성병원(방중)", "중앙대학교광명병원(방중)"
             ]
         }
     }
@@ -165,15 +166,17 @@ async def verify_password(payload: PasswordVerifyRequest):
     raise HTTPException(status_code=401, detail="비밀번호가 올바르지 않습니다.")
 
 @app.get("/api/v1/hospitals")
-async def get_hospitals(year: str, semester: str, subject: str):
+async def get_hospitals(grade: str, semester: str, subject: str):
     try:
+        grade_dict = MASTER_HOSPITAL_DB.get(grade, {})
+        semester_dict = grade_dict.get(semester, {})
         if subject == "ALL":
             all_list = []
-            for s in MASTER_HOSPITAL_DB.get(year, {}).get(semester, {}).values():
+            for s in semester_dict.values():
                 all_list.extend(s)
             return {"hospitals": list(set(all_list))}
         else:
-            h_list = MASTER_HOSPITAL_DB.get(year, {}).get(semester, {}).get(subject, [])
+            h_list = semester_dict.get(subject, [])
             return {"hospitals": h_list}
     except Exception:
         return {"hospitals": []}
@@ -182,6 +185,7 @@ async def get_hospitals(year: str, semester: str, subject: str):
 async def assign_hospital_from_file(
     target_hospital: str = Form(...),
     grade: str = Form("3학년"),
+    semester: str = Form("1학기"),
     start_date: str = Form(""),
     end_date: str = Form(""),
     max_period_capacity: int = Form(50),
@@ -250,12 +254,12 @@ async def assign_hospital_from_file(
                 "ai_report": ai_rep, "is_eligible": False
             })
 
-    optimization_method = "Transit DB & MFI Sorting (Watermark Logo Applied)"
+    optimization_method = "Transit DB & MFI Sorting (Enhanced Watermark)"
     if use_hungarian and len(eligible_list) > 1:
         cost_matrix = np.array([[item["student"]["fatigue_index"] for _ in range(len(eligible_list))] for item in eligible_list])
         row_ind, _ = linear_sum_assignment(cost_matrix)
         eligible_list = [eligible_list[i] for i in row_ind]
-        optimization_method = "Transit DB & SciPy Hungarian Optimization (Watermark Logo Applied)"
+        optimization_method = "Transit DB & SciPy Hungarian Optimization (Enhanced Watermark)"
     else:
         eligible_list.sort(key=lambda x: x["student"]["fatigue_index"])
 
@@ -302,52 +306,33 @@ def render_ui():
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
-            body { 
-                font-family: 'Pretendard', sans-serif; 
-                background-color: #f1f5f9;
-                color: #1e293b; 
-            }
-            /* 배경 워터마크 로고 레이어 */
-            .watermark-bg {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                width: 55vw;
-                max-width: 700px;
-                opacity: 0.06; /* 아주 연하게 워터마크처럼 깔림 */
-                z-index: -1;
-                pointer-events: none;
-                transition: all 0.4s ease-in-out;
-            }
+            body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; color: #1e293b; }
+            /* 배경 워터마크 로고 투명도를 0.15로 살짝 진하게 상향 조정 */
+            .watermark-bg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 55vw; max-width: 700px; opacity: 0.15; z-index: -1; pointer-events: none; transition: all 0.4s ease-in-out; }
             .navbar-medical { background: linear-gradient(135deg, #0f172a, #1e3a8a); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-            .card-medical { border: none; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.93); backdrop-filter: blur(10px); transition: transform 0.2s; }
+            .card-medical { border: none; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(10px); transition: transform 0.2s; }
             .card-header-medical { background: #ffffff; border-bottom: 2px solid #f1f5f9; font-weight: 700; color: #1e3a8a; border-radius: 16px 16px 0 0 !important; padding: 18px 24px; font-size: 16px; }
             .btn-medical-run { background: linear-gradient(135deg, #0d9488, #0f766e); border: none; font-weight: 700; padding: 16px; border-radius: 12px; color: white; font-size: 16px; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3); transition: all 0.2s; }
             .btn-medical-run:hover { background: linear-gradient(135deg, #0f766e, #115e59); transform: translateY(-1px); }
             .btn-excel { background: linear-gradient(135deg, #059669, #047857); border: none; font-weight: 700; border-radius: 8px; color: white; }
-            
             .table-medical th { background-color: #1e3a8a; color: white; text-align: center; font-size: 14px; padding: 14px; font-weight: 600; }
             .table-medical td { vertical-align: middle; text-align: center; font-size: 14px; padding: 14px; }
             .rank-badge { background: #f59e0b; color: white; padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; }
             .mfi-badge { background-color: #e0f2fe; color: #0369a1; font-weight: 700; padding: 5px 10px; border-radius: 6px; border: 1px solid #bae6fd; }
-            
             .auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%); z-index: 9999; display: flex; justify-content: center; align-items: center; }
             .auth-card { background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(20px); width: 90%; max-width: 400px; padding: 40px 32px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; color: white; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
             .auth-input { background: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.15); color: #000000 !important; font-weight: 700; border-radius: 12px; padding: 14px; text-align: center; }
-            
             .dashboard-container { max-width: 97% !important; margin: 0 auto; position: relative; z-index: 1; }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
     <body>
-        <!-- 화면 중앙에 은은하게 깔리는 다이나믹 워터마크 이미지 -->
         <img id="watermarkLogo" class="watermark-bg" src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80" alt="Hospital Watermark">
 
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-4.2)</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-5.1)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
                 <button onclick="verifyPassword()" class="btn w-100 fw-bold py-2" style="background-color: #0d9488; color: white;">시스템 접속하기</button>
             </div>
@@ -356,7 +341,7 @@ def render_ui():
         <nav class="navbar navbar-dark navbar-medical shadow-sm mb-4 py-3">
             <div class="container-fluid px-4">
                 <span class="navbar-brand fw-bold fs-5">🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
-                <span class="badge px-3 py-2 rounded-pill" style="background-color: #0d9488 !important; font-size: 13px;">v2026.09.10-4.2 (병원 로고 워터마크)</span>
+                <span class="badge px-3 py-2 rounded-pill" style="background-color: #0d9488 !important; font-size: 13px;">v2026.09.10-5.1 (선명한 워터마크)</span>
             </div>
         </nav>
 
@@ -367,46 +352,27 @@ def render_ui():
                         <div class="card-header card-header-medical">📋 실습 교과목 및 병원 조건 설정</div>
                         <div class="card-body p-4">
                             <div class="row g-2 mb-3">
-                                <div class="col-4">
+                                <div class="col-6">
                                     <label class="form-label fw-bold fs-7 text-secondary">학년 선택</label>
-                                    <select id="grade_select" class="form-select fw-bold text-success border-2">
+                                    <select id="grade_select" class="form-select fw-bold text-success border-2" onchange="updateSubjectsAndHospitals()">
                                         <option value="3학년" selected>3학년</option>
                                         <option value="4학년">4학년</option>
                                     </select>
                                 </div>
-                                <div class="col-4">
-                                    <label class="form-label fw-bold fs-7 text-secondary">학년도</label>
-                                    <select id="year_select" class="form-select fw-bold border-2" onchange="updateHospitals()">
-                                        <option value="2026">2026학년도</option>
-                                    </select>
-                                </div>
-                                <div class="col-4">
+                                <div class="col-6">
                                     <label class="form-label fw-bold fs-7 text-secondary">학기 선택</label>
-                                    <select id="semester_select" class="form-select fw-bold text-primary border-2" onchange="updateHospitals()">
-                                        <option value="1학기">1학기</option>
-                                        <option value="2학기" selected>2학기</option>
+                                    <select id="semester_select" class="form-select fw-bold text-primary border-2" onchange="updateSubjectsAndHospitals()">
+                                        <option value="1학기" selected>1학기</option>
+                                        <option value="2학기">2학기</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-bold text-secondary">실습 교과목 선택</label>
-                                <select id="subject_select" class="form-select fw-bold text-success border-2" onchange="updateHospitals()">
-                                    <option value="ALL">전체 교과목 병원 통합</option>
-                                    <option value="성인I">성인간호학실습 I</option>
-                                    <option value="여성">여성건강간호학실습</option>
-                                    <option value="성인Ⅲ">성인간호학실습 Ⅲ</option>
-                                    <option value="관리">간호관리학실습</option>
-                                    <option value="지역">지역사회간호학실습</option>
-                                    <option value="성인Ⅱ">성인간호학실습 Ⅱ</option>
-                                    <option value="정신">정신간호학실습</option>
-                                    <option value="아동">아동간호학실습</option>
-                                    <option value="성인Ⅳ">성인간호학실습 Ⅳ</option>
-                                    <option value="종합">종합실습</option>
-                                </select>
+                                <select id="subject_select" class="form-select fw-bold text-success border-2" onchange="updateHospitals()"></select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-bold text-secondary">배정 대상 병원 선택</label>
-                                <!-- 병원 선택 시 워터마크 로고가 동적으로 바뀌도록 연결 -->
+                                <label class="form-label fw-bold text-secondary">배정 대상 병원 선택 <span class="text-danger small">(방중 병원 표기 확인)</span></label>
                                 <select id="hospital_select" class="form-select fw-bold border-2" onchange="changeHospitalWatermark()"></select>
                             </div>
                             <div class="accordion mt-3" id="advancedOptions">
@@ -430,11 +396,11 @@ def render_ui():
                                             </div>
                                             <div class="row g-2 mb-3">
                                                 <div class="col-6">
-                                                    <label class="form-label fs-7 fw-bold mb-1 text-secondary" title="해당 기간 전체 수용 가능 인원">기간별 최대정원</label>
+                                                    <label class="form-label fs-7 fw-bold mb-1 text-secondary">기간별 최대정원</label>
                                                     <input type="number" id="max_period_cap" class="form-control border-2" value="50">
                                                 </div>
                                                 <div class="col-6">
-                                                    <label class="form-label fs-7 fw-bold mb-1 text-secondary" title="선택한 병원별 수용 가능 최대 인원">기관별 최대정원</label>
+                                                    <label class="form-label fs-7 fw-bold mb-1 text-secondary">기관별 최대정원</label>
                                                     <input type="number" id="max_hospital_cap" class="form-control border-2" value="10">
                                                 </div>
                                             </div>
@@ -458,15 +424,11 @@ def render_ui():
                                             </div>
                                             <div class="form-check mt-3">
                                                 <input class="form-check-input border-2" type="checkbox" id="exclude_past_hospital">
-                                                <label class="form-check-label fs-7 fw-bold text-dark" for="exclude_past_hospital">
-                                                    과거 실습 기관 중복 배정 자동 제외
-                                                </label>
+                                                <label class="form-check-label fs-7 fw-bold text-dark" for="exclude_past_hospital">과거 실습 기관 중복 배정 자동 제외</label>
                                             </div>
                                             <div class="form-check mt-2">
                                                 <input class="form-check-input border-2" type="checkbox" id="use_hungarian">
-                                                <label class="form-check-label fs-7 fw-bold text-dark" for="use_hungarian">
-                                                    SciPy 헝가리안 글로벌 최적 매칭 알고리즘 적용
-                                                </label>
+                                                <label class="form-check-label fs-7 fw-bold text-dark" for="use_hungarian">SciPy 헝가리안 글로벌 최적 매칭 알고리즘 적용</label>
                                             </div>
                                         </div>
                                     </div>
@@ -512,9 +474,9 @@ def render_ui():
                                 <th>이름</th>
                                 <th>GPA</th>
                                 <th>주소</th>
-                                <th title="수도권 법정동별 실제 대중교통망을 바탕으로 이른 출근 시간대(오전 05시) 기준 소요 시간을 산출한 데이터입니다.">대중교통 소요시간(05시 기준) ℹ️</th>
-                                <th title="MFI (Modified Fatigue Index): 통학 소요 시간 및 환승 횟수, 도보 이동 거리 등 학생이 겪는 신체적·시간적 통학 피로도를 수치화한 지수입니다.">체감 피로도(MFI) ℹ️</th>
-                                <th title="학생의 GPA, 통학 시간, 피로도(MFI) 등의 변수를 머신러닝(RandomForest) 모델에 입력하여 예측한 종합 만족도 점수입니다.">AI 만족도 ℹ️</th>
+                                <th>대중교통 소요시간(05시 기준) ℹ️</th>
+                                <th>체감 피로도(MFI) ℹ️️</th>
+                                <th>AI 만족도 ℹ️</th>
                             </tr>
                         </thead>
                         <tbody id="result_body"></tbody>
@@ -535,29 +497,44 @@ def render_ui():
             }
             if(sessionStorage.getItem('auth')==='true') document.getElementById('authOverlay').style.display='none';
 
-            // 병원 선택에 따라 배경 워터마크 로고를 다이나믹하게 바꿔주는 함수
-            function changeHospitalWatermark() {
-                let hospital = document.getElementById('hospital_select').value;
-                let logoImg = document.getElementById('watermarkLogo');
-                
-                // 기본 대학병원 로고 이미지 (고려대안산병원 로고 예시 포함)
-                if (hospital.includes('고려대학교안산병원')) {
-                    logoImg.src = 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=800&q=80'; // 고려대 계열 상징 엠블럼 느낌
-                } else if (hospital.includes('성모')) {
-                    logoImg.src = 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80'; 
-                } else if (hospital.includes('아주')) {
-                    logoImg.src = 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=800&q=80';
-                } else {
-                    logoImg.src = 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=80';
+            const curriculumData = {
+                "3학년": {
+                    "1학기": ["성인1", "여성"],
+                    "2학기": ["성인2", "아동", "정신"]
+                },
+                "4학년": {
+                    "1학기": ["성인3", "지역", "관리"],
+                    "2학기": ["종합"]
                 }
+            };
+
+            function updateSubjectsAndHospitals() {
+                let grade = document.getElementById('grade_select').value;
+                let sem = document.getElementById('semester_select').value;
+                let subBox = document.getElementById('subject_select');
+                
+                subBox.innerHTML = '';
+                let subjects = curriculumData[grade][sem] || [];
+                
+                let optAll = document.createElement('option');
+                optAll.value = "ALL"; optAll.textContent = "전체 교과목 병원 통합";
+                subBox.appendChild(optAll);
+
+                subjects.forEach(s => {
+                    let opt = document.createElement('option');
+                    opt.value = s; opt.textContent = s + " 실습";
+                    subBox.appendChild(opt);
+                });
+
+                updateHospitals();
             }
 
             async function updateHospitals() {
-                let year = document.getElementById('year_select').value;
+                let grade = document.getElementById('grade_select').value;
                 let sem = document.getElementById('semester_select').value;
                 let sub = document.getElementById('subject_select').value;
 
-                let res = await fetch(`/api/v1/hospitals?year=${year}&semester=${sem}&subject=${sub}`);
+                let res = await fetch(`/api/v1/hospitals?grade=${grade}&semester=${sem}&subject=${sub}`);
                 let data = await res.json();
                 
                 let box = document.getElementById('hospital_select');
@@ -565,7 +542,12 @@ def render_ui():
                 if(data.hospitals && data.hospitals.length > 0) {
                     data.hospitals.sort().forEach(h => {
                         let opt = document.createElement('option');
-                        opt.value = h; opt.textContent = h;
+                        opt.value = h; 
+                        if (h.includes('방중')) {
+                            opt.textContent = h + " 🏖️[방학중 운영]";
+                        } else {
+                            opt.textContent = h;
+                        }
                         box.appendChild(opt);
                     });
                     changeHospitalWatermark();
@@ -575,7 +557,20 @@ def render_ui():
                     box.appendChild(opt);
                 }
             }
-            window.onload = updateHospitals;
+
+            function changeHospitalWatermark() {
+                let hospital = document.getElementById('hospital_select').value;
+                let logoImg = document.getElementById('watermarkLogo');
+                if (hospital.includes('방중')) {
+                    logoImg.style.opacity = '0.20'; // 방중 병원 선택 시 조금 더 진하게 강조
+                } else {
+                    logoImg.style.opacity = '0.15';
+                }
+            }
+
+            window.onload = function() {
+                updateSubjectsAndHospitals();
+            };
 
             let currentResults = [], currentHospital = "";
 
@@ -588,6 +583,7 @@ def render_ui():
                 let form = new FormData();
                 form.append('target_hospital', hospital);
                 form.append('grade', document.getElementById('grade_select').value);
+                form.append('semester', document.getElementById('semester_select').value);
                 form.append('start_date', document.getElementById('start_date').value);
                 form.append('end_date', document.getElementById('end_date').value);
                 form.append('max_period_capacity', document.getElementById('max_period_cap').value);
@@ -610,11 +606,12 @@ def render_ui():
                 currentHospital = data.target_hospital;
 
                 let gradeVal = document.getElementById('grade_select').value;
+                let semVal = document.getElementById('semester_select').value;
                 let sDate = document.getElementById('start_date').value;
                 let eDate = document.getElementById('end_date').value;
 
                 document.getElementById('summary_box').style.display = 'block';
-                document.getElementById('summary_text').innerHTML = `<b>[${gradeVal}] 실습 기간: ${sDate} ~ ${eDate}</b> | <b>병원:</b> ${hospital} | <b>배정/대상:</b> <span class="text-teal fw-bold">${data.eligible_count}</span>/${data.total_students}명`;
+                document.getElementById('summary_text').innerHTML = `<b>[${gradeVal} ${semVal}] ${sDate} ~ ${eDate}</b> | <b>병원:</b> ${hospital} | <b>배정/대상:</b> <span class="text-teal fw-bold">${data.eligible_count}</span>/${data.total_students}명`;
 
                 let tbody = document.getElementById('result_body');
                 tbody.innerHTML = '';
