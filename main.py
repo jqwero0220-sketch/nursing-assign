@@ -10,7 +10,7 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-3.2)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-4.0)")
 
 SECRET_PASSWORD = "ansan king"
 
@@ -250,12 +250,12 @@ async def assign_hospital_from_file(
                 "ai_report": ai_rep, "is_eligible": False
             })
 
-    optimization_method = "Transit DB & MFI Sorting (Wide Layout Applied)"
+    optimization_method = "Transit DB & MFI Sorting (Medical Dashboard Applied)"
     if use_hungarian and len(eligible_list) > 1:
         cost_matrix = np.array([[item["student"]["fatigue_index"] for _ in range(len(eligible_list))] for item in eligible_list])
         row_ind, _ = linear_sum_assignment(cost_matrix)
         eligible_list = [eligible_list[i] for i in row_ind]
-        optimization_method = "Transit DB & SciPy Hungarian Optimization (Wide Layout Applied)"
+        optimization_method = "Transit DB & SciPy Hungarian Optimization (Medical Dashboard Applied)"
     else:
         eligible_list.sort(key=lambda x: x["student"]["fatigue_index"])
 
@@ -302,22 +302,28 @@ def render_ui():
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
-            body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; }
-            .navbar-custom { background-color: #0f172a; padding-left: 30px; padding-right: 30px; }
-            .card-custom { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); background: #ffffff; }
-            .card-header-custom { background: #f8fafc; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: #0f172a; border-radius: 16px 16px 0 0 !important; }
-            .btn-run { background: linear-gradient(135deg, #03c75a, #02873c); border: none; font-weight: 700; padding: 14px; border-radius: 10px; color: white; transition: all 0.2s; font-size: 16px; }
-            .btn-run:hover { background: linear-gradient(135deg, #02873c, #01632c); }
+            body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; color: #1e293b; }
+            /* 메디컬 네이비 테마 상단바 */
+            .navbar-medical { background: linear-gradient(135deg, #0f172a, #1e3a8a); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+            .card-medical { border: none; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); background: #ffffff; transition: transform 0.2s; }
+            .card-header-medical { background: #ffffff; border-bottom: 2px solid #f1f5f9; font-weight: 700; color: #1e3a8a; border-radius: 16px 16px 0 0 !important; padding: 18px 24px; font-size: 16px; }
+            .btn-medical-run { background: linear-gradient(135deg, #0d9488, #0f766e); border: none; font-weight: 700; padding: 16px; border-radius: 12px; color: white; font-size: 16px; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3); transition: all 0.2s; }
+            .btn-medical-run:hover { background: linear-gradient(135deg, #0f766e, #115e59); transform: translateY(-1px); }
             .btn-excel { background: linear-gradient(135deg, #059669, #047857); border: none; font-weight: 700; border-radius: 8px; color: white; }
-            .table-custom th { background-color: #0f172a; color: white; text-align: center; font-size: 14px; cursor: help; padding: 12px; }
-            .table-custom td { vertical-align: middle; text-align: center; font-size: 14px; padding: 12px; }
-            .rank-badge { background: #d97706; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; }
-            .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe; }
+            
+            /* 테이블 스타일 */
+            .table-medical th { background-color: #1e3a8a; color: white; text-align: center; font-size: 14px; padding: 14px; font-weight: 600; }
+            .table-medical td { vertical-align: middle; text-align: center; font-size: 14px; padding: 14px; }
+            .rank-badge { background: #f59e0b; color: white; padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; }
+            .mfi-badge { background-color: #e0f2fe; color: #0369a1; font-weight: 700; padding: 5px 10px; border-radius: 6px; border: 1px solid #bae6fd; }
+            
+            /* 보안 인증 모달 */
             .auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%); z-index: 9999; display: flex; justify-content: center; align-items: center; }
-            .auth-card { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(20px); width: 90%; max-width: 400px; padding: 40px 32px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; color: white; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
+            .auth-card { background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(20px); width: 90%; max-width: 400px; padding: 40px 32px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; color: white; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
             .auth-input { background: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.15); color: #000000 !important; font-weight: 700; border-radius: 12px; padding: 14px; text-align: center; }
-            /* 좌우 여백을 넓히고 화면을 시원하게 채우기 위한 설정 */
-            .wide-container { max-width: 96% !important; margin: 0 auto; }
+            
+            /* 와이드 레이아웃 */
+            .dashboard-container { max-width: 97% !important; margin: 0 auto; }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
@@ -325,50 +331,50 @@ def render_ui():
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-3.2)</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-4.0)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
-                <button onclick="verifyPassword()" class="btn btn-success w-100 fw-bold py-2">시스템 접속하기</button>
+                <button onclick="verifyPassword()" class="btn btn-teal w-100 fw-bold py-2" style="background-color: #0d9488; color: white;">시스템 접속하기</button>
             </div>
         </div>
 
-        <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
+        <nav class="navbar navbar-dark navbar-medical shadow-sm mb-4 py-3">
             <div class="container-fluid px-4">
-                <span class="navbar-brand fw-bold fs-5">로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
-                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-3.2 (와이드 레이아웃)</span>
+                <span class="navbar-brand fw-bold fs-5">🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
+                <span class="badge bg-teal px-3 py-2 rounded-pill" style="background-color: #0d9488 !important; font-size: 13px;">v2026.09.10-4.0 (메디컬 대시보드)</span>
             </div>
         </nav>
 
-        <div class="container-fluid wide-container pb-5">
+        <div class="container-fluid dashboard-container pb-5">
             <div class="row g-4 mb-4">
                 <div class="col-lg-6">
-                    <div class="card card-custom h-100">
-                        <div class="card-header card-header-custom py-3 px-4 fs-6">실습 교과목 및 병원 조건 설정</div>
+                    <div class="card card-medical h-100">
+                        <div class="card-header card-header-medical">📋 실습 교과목 및 병원 조건 설정</div>
                         <div class="card-body p-4">
                             <div class="row g-2 mb-3">
                                 <div class="col-4">
-                                    <label class="form-label fw-bold fs-7">학년 선택</label>
-                                    <select id="grade_select" class="form-select fw-bold text-success">
+                                    <label class="form-label fw-bold fs-7 text-secondary">학년 선택</label>
+                                    <select id="grade_select" class="form-select fw-bold text-success border-2">
                                         <option value="3학년" selected>3학년</option>
                                         <option value="4학년">4학년</option>
                                     </select>
                                 </div>
                                 <div class="col-4">
-                                    <label class="form-label fw-bold fs-7">학년도</label>
-                                    <select id="year_select" class="form-select fw-bold" onchange="updateHospitals()">
+                                    <label class="form-label fw-bold fs-7 text-secondary">학년도</label>
+                                    <select id="year_select" class="form-select fw-bold border-2" onchange="updateHospitals()">
                                         <option value="2026">2026학년도</option>
                                     </select>
                                 </div>
                                 <div class="col-4">
-                                    <label class="form-label fw-bold fs-7">학기 선택</label>
-                                    <select id="semester_select" class="form-select fw-bold text-primary" onchange="updateHospitals()">
+                                    <label class="form-label fw-bold fs-7 text-secondary">학기 선택</label>
+                                    <select id="semester_select" class="form-select fw-bold text-primary border-2" onchange="updateHospitals()">
                                         <option value="1학기">1학기</option>
                                         <option value="2학기" selected>2학기</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-bold">실습 교과목 선택</label>
-                                <select id="subject_select" class="form-select fw-bold text-success" onchange="updateHospitals()">
+                                <label class="form-label fw-bold text-secondary">실습 교과목 선택</label>
+                                <select id="subject_select" class="form-select fw-bold text-success border-2" onchange="updateHospitals()">
                                     <option value="ALL">전체 교과목 병원 통합</option>
                                     <option value="성인I">성인간호학실습 I</option>
                                     <option value="여성">여성건강간호학실습</option>
@@ -383,41 +389,41 @@ def render_ui():
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-bold">배정 대상 병원 선택</label>
-                                <select id="hospital_select" class="form-select fw-bold"></select>
+                                <label class="form-label fw-bold text-secondary">배정 대상 병원 선택</label>
+                                <select id="hospital_select" class="form-select fw-bold border-2"></select>
                             </div>
-                            <div class="accordion" id="advancedOptions">
-                                <div class="accordion-item border-0 bg-light rounded-3">
+                            <div class="accordion mt-3" id="advancedOptions">
+                                <div class="accordion-item border-0 bg-light rounded-3 overflow-hidden">
                                     <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed bg-light fw-bold text-secondary fs-7 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced">
-                                            캘린더 기간, 정원(CAPA), 자격 조건 상세 설정
+                                        <button class="accordion-button collapsed bg-light fw-bold text-dark fs-7 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced">
+                                            ⚙️ 캘린더 기간, 정원(CAPA), 자격 조건 상세 설정
                                         </button>
                                     </h2>
                                     <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#advancedOptions">
-                                        <div class="accordion-body pt-2 pb-3">
+                                        <div class="accordion-body pt-3 pb-3 bg-white border-top">
                                             <div class="row g-2 mb-3">
                                                 <div class="col-6">
-                                                    <label class="form-label fs-7 fw-bold mb-1">실습 시작일 (From)</label>
-                                                    <input type="date" id="start_date" class="form-control" value="2026-09-01">
+                                                    <label class="form-label fs-7 fw-bold mb-1 text-secondary">실습 시작일 (From)</label>
+                                                    <input type="date" id="start_date" class="form-control border-2" value="2026-09-01">
                                                 </div>
                                                 <div class="col-6">
-                                                    <label class="form-label fs-7 fw-bold mb-1">실습 종료일 (To)</label>
-                                                    <input type="date" id="end_date" class="form-control" value="2026-09-18">
+                                                    <label class="form-label fs-7 fw-bold mb-1 text-secondary">실습 종료일 (To)</label>
+                                                    <input type="date" id="end_date" class="form-control border-2" value="2026-09-18">
                                                 </div>
                                             </div>
                                             <div class="row g-2 mb-3">
                                                 <div class="col-6">
-                                                    <label class="form-label fs-7 fw-bold mb-1" title="해당 기간 전체 수용 가능 인원">기간별 최대정원</label>
-                                                    <input type="number" id="max_period_cap" class="form-control" value="50">
+                                                    <label class="form-label fs-7 fw-bold mb-1 text-secondary" title="해당 기간 전체 수용 가능 인원">기간별 최대정원</label>
+                                                    <input type="number" id="max_period_cap" class="form-control border-2" value="50">
                                                 </div>
                                                 <div class="col-6">
-                                                    <label class="form-label fs-7 fw-bold mb-1" title="선택한 병원별 수용 가능 최대 인원">기관별 최대정원</label>
-                                                    <input type="number" id="max_hospital_cap" class="form-control" value="10">
+                                                    <label class="form-label fs-7 fw-bold mb-1 text-secondary" title="선택한 병원별 수용 가능 최대 인원">기관별 최대정원</label>
+                                                    <input type="number" id="max_hospital_cap" class="form-control border-2" value="10">
                                                 </div>
                                             </div>
                                             <div class="mb-3">
-                                                <label class="form-label fs-7 fw-bold mb-1">성별 조건</label>
-                                                <select id="gender_criteria" class="form-select">
+                                                <label class="form-label fs-7 fw-bold mb-1 text-secondary">성별 조건</label>
+                                                <select id="gender_criteria" class="form-select border-2">
                                                     <option value="무관" selected>무관</option>
                                                     <option value="남성만">남성만</option>
                                                     <option value="여성만">여성만</option>
@@ -425,22 +431,22 @@ def render_ui():
                                             </div>
                                             <div class="row g-2 mb-2">
                                                 <div class="col-6">
-                                                    <label class="form-label fs-7 fw-bold mb-1">최소 GPA</label>
-                                                    <input type="number" step="0.1" id="min_gpa" class="form-control" placeholder="예: 3.5">
+                                                    <label class="form-label fs-7 fw-bold mb-1 text-secondary">최소 GPA</label>
+                                                    <input type="number" step="0.1" id="min_gpa" class="form-control border-2" placeholder="예: 3.5">
                                                 </div>
                                                 <div class="col-6">
-                                                    <label class="form-label fs-7 fw-bold mb-1">출생연도 이후</label>
-                                                    <input type="number" id="birth_year" class="form-control" placeholder="예: 2003">
+                                                    <label class="form-label fs-7 fw-bold mb-1 text-secondary">출생연도 이후</label>
+                                                    <input type="number" id="birth_year" class="form-control border-2" placeholder="예: 2003">
                                                 </div>
                                             </div>
-                                            <div class="form-check mt-2" title="학생의 과거 실습 이력과 현재 배정 병원이 겹치는 경우 배정 대상에서 자동 제외합니다.">
-                                                <input class="form-check-input" type="checkbox" id="exclude_past_hospital">
+                                            <div class="form-check mt-3">
+                                                <input class="form-check-input border-2" type="checkbox" id="exclude_past_hospital">
                                                 <label class="form-check-label fs-7 fw-bold text-dark" for="exclude_past_hospital">
                                                     과거 실습 기관 중복 배정 자동 제외
                                                 </label>
                                             </div>
-                                            <div class="form-check mt-2" title="전체 학생의 통학 피로도 총합이 최소가 되도록 수학적으로 최적 매칭을 수행합니다.">
-                                                <input class="form-check-input" type="checkbox" id="use_hungarian">
+                                            <div class="form-check mt-2">
+                                                <input class="form-check-input border-2" type="checkbox" id="use_hungarian">
                                                 <label class="form-check-label fs-7 fw-bold text-dark" for="use_hungarian">
                                                     SciPy 헝가리안 글로벌 최적 매칭 알고리즘 적용
                                                 </label>
@@ -453,35 +459,35 @@ def render_ui():
                     </div>
                 </div>
                 <div class="col-lg-6">
-                    <div class="card card-custom h-100">
-                        <div class="card-header card-header-custom py-3 px-4 fs-6">학생 명단 업로드</div>
+                    <div class="card card-medical h-100">
+                        <div class="card-header card-header-medical">📁 학생 명단 엑셀 업로드</div>
                         <div class="card-body p-4 d-flex flex-column justify-content-between">
-                            <div class="border border-2 border-dashed rounded-3 p-5 text-center bg-light mb-4">
-                                <h5 class="fw-bold mb-2 text-dark">엑셀 컬럼 형식 안내</h5>
-                                <p class="text-secondary mb-3">학번, 이름, 성별, GPA, 출생연도, 주소, 과거실습지</p>
-                                <input type="file" id="excel_file" class="form-control form-control-lg" accept=".csv, .xlsx">
+                            <div class="border border-2 border-dashed border-primary rounded-4 p-5 text-center bg-light mb-4">
+                                <h5 class="fw-bold mb-2 text-primary">엑셀 파일 업로드</h5>
+                                <p class="text-secondary small mb-3">지원 형식: 학번, 이름, 성별, GPA, 출생연도, 주소, 과거실습지</p>
+                                <input type="file" id="excel_file" class="form-control form-control-lg border-2" accept=".csv, .xlsx">
                             </div>
-                            <button onclick="runAssignment()" class="btn btn-run w-100 shadow-sm">
-                                🚀 실시간 최적 배정 실행하기
+                            <button onclick="runAssignment()" class="btn btn-medical-run w-100 shadow-sm">
+                                🚀 AI 실시간 최적 배정 실행하기
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="summary_box" style="display:none;" class="card card-custom p-4 mb-4 border-start border-4 border-success">
+            <div id="summary_box" style="display:none;" class="card card-medical p-4 mb-4 border-start border-5 border-teal" style="border-left: 5px solid #0d9488 !important;">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
-                        <h5 class="fw-bold mb-2">배정 결과 요약</h5>
-                        <p id="summary_text" class="mb-0 fs-5"></p>
+                        <h5 class="fw-bold mb-2 text-primary">📊 배정 결과 요약</h5>
+                        <p id="summary_text" class="mb-0 fs-5 text-dark"></p>
                     </div>
-                    <button class="btn btn-excel px-4 py-2 shadow-sm" onclick="exportToExcel()">결과 엑셀 다운로드</button>
+                    <button class="btn btn-excel px-4 py-2 shadow-sm" onclick="exportToExcel()">📥 결과 엑셀 다운로드</button>
                 </div>
             </div>
 
-            <div class="card card-custom">
+            <div class="card card-medical overflow-hidden">
                 <div class="table-responsive">
-                    <table id="result_table" class="table table-hover table-custom mb-0" style="display:none;">
+                    <table id="result_table" class="table table-hover table-medical mb-0" style="display:none;">
                         <thead>
                             <tr>
                                 <th>순위</th>
@@ -489,7 +495,7 @@ def render_ui():
                                 <th>이름</th>
                                 <th>GPA</th>
                                 <th>주소</th>
-                                <th title="수도권 법정동별 실제 대중교통망을 바탕으로 이른 출근 시간대(오전 05시) 기준 소요 시간을 산출한 데이터입니다.">실시간 대중교통 소요시간(05시 기준) ℹ️️</th>
+                                <th title="수도권 법정동별 실제 대중교통망을 바탕으로 이른 출근 시간대(오전 05시) 기준 소요 시간을 산출한 데이터입니다.">대중교통 소요시간(05시 기준) ℹ️</th>
                                 <th title="MFI (Modified Fatigue Index): 통학 소요 시간 및 환승 횟수, 도보 이동 거리 등 학생이 겪는 신체적·시간적 통학 피로도를 수치화한 지수입니다.">체감 피로도(MFI) ℹ️</th>
                                 <th title="학생의 GPA, 통학 시간, 피로도(MFI) 등의 변수를 머신러닝(RandomForest) 모델에 입력하여 예측한 종합 만족도 점수입니다.">AI 만족도 ℹ️</th>
                             </tr>
@@ -573,7 +579,7 @@ def render_ui():
                 let eDate = document.getElementById('end_date').value;
 
                 document.getElementById('summary_box').style.display = 'block';
-                document.getElementById('summary_text').innerHTML = `<b>[${gradeVal}] 실습 기간: ${sDate} ~ ${eDate}</b> | <b>병원:</b> ${hospital} | <b>배정/대상:</b> ${data.eligible_count}/${data.total_students}명`;
+                document.getElementById('summary_text').innerHTML = `<b>[${gradeVal}] 실습 기간: ${sDate} ~ ${eDate}</b> | <b>병원:</b> ${hospital} | <b>배정/대상:</b> <span class="text-teal fw-bold">${data.eligible_count}</span>/${data.total_students}명`;
 
                 let tbody = document.getElementById('result_body');
                 tbody.innerHTML = '';
