@@ -10,7 +10,7 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-5.1)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-5.2)")
 
 SECRET_PASSWORD = "ansan king"
 
@@ -254,12 +254,12 @@ async def assign_hospital_from_file(
                 "ai_report": ai_rep, "is_eligible": False
             })
 
-    optimization_method = "Transit DB & MFI Sorting (Enhanced Watermark)"
+    optimization_method = "Transit DB & MFI Sorting (Clean Dashboard)"
     if use_hungarian and len(eligible_list) > 1:
         cost_matrix = np.array([[item["student"]["fatigue_index"] for _ in range(len(eligible_list))] for item in eligible_list])
         row_ind, _ = linear_sum_assignment(cost_matrix)
         eligible_list = [eligible_list[i] for i in row_ind]
-        optimization_method = "Transit DB & SciPy Hungarian Optimization (Enhanced Watermark)"
+        optimization_method = "Transit DB & SciPy Hungarian Optimization (Clean Dashboard)"
     else:
         eligible_list.sort(key=lambda x: x["student"]["fatigue_index"])
 
@@ -306,11 +306,9 @@ def render_ui():
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
-            body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; color: #1e293b; }
-            /* 배경 워터마크 로고 투명도를 0.15로 살짝 진하게 상향 조정 */
-            .watermark-bg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 55vw; max-width: 700px; opacity: 0.15; z-index: -1; pointer-events: none; transition: all 0.4s ease-in-out; }
+            body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; }
             .navbar-medical { background: linear-gradient(135deg, #0f172a, #1e3a8a); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-            .card-medical { border: none; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(10px); transition: transform 0.2s; }
+            .card-medical { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); background: #ffffff; }
             .card-header-medical { background: #ffffff; border-bottom: 2px solid #f1f5f9; font-weight: 700; color: #1e3a8a; border-radius: 16px 16px 0 0 !important; padding: 18px 24px; font-size: 16px; }
             .btn-medical-run { background: linear-gradient(135deg, #0d9488, #0f766e); border: none; font-weight: 700; padding: 16px; border-radius: 12px; color: white; font-size: 16px; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3); transition: all 0.2s; }
             .btn-medical-run:hover { background: linear-gradient(135deg, #0f766e, #115e59); transform: translateY(-1px); }
@@ -322,17 +320,15 @@ def render_ui():
             .auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%); z-index: 9999; display: flex; justify-content: center; align-items: center; }
             .auth-card { background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(20px); width: 90%; max-width: 400px; padding: 40px 32px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; color: white; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
             .auth-input { background: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.15); color: #000000 !important; font-weight: 700; border-radius: 12px; padding: 14px; text-align: center; }
-            .dashboard-container { max-width: 97% !important; margin: 0 auto; position: relative; z-index: 1; }
+            .dashboard-container { max-width: 97% !important; margin: 0 auto; }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
     <body>
-        <img id="watermarkLogo" class="watermark-bg" src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80" alt="Hospital Watermark">
-
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-5.1)</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-5.2)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
                 <button onclick="verifyPassword()" class="btn w-100 fw-bold py-2" style="background-color: #0d9488; color: white;">시스템 접속하기</button>
             </div>
@@ -341,7 +337,7 @@ def render_ui():
         <nav class="navbar navbar-dark navbar-medical shadow-sm mb-4 py-3">
             <div class="container-fluid px-4">
                 <span class="navbar-brand fw-bold fs-5">🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
-                <span class="badge px-3 py-2 rounded-pill" style="background-color: #0d9488 !important; font-size: 13px;">v2026.09.10-5.1 (선명한 워터마크)</span>
+                <span class="badge px-3 py-2 rounded-pill" style="background-color: #0d9488 !important; font-size: 13px;">v2026.09.10-5.2 (클린 대시보드)</span>
             </div>
         </nav>
 
@@ -373,7 +369,7 @@ def render_ui():
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-bold text-secondary">배정 대상 병원 선택 <span class="text-danger small">(방중 병원 표기 확인)</span></label>
-                                <select id="hospital_select" class="form-select fw-bold border-2" onchange="changeHospitalWatermark()"></select>
+                                <select id="hospital_select" class="form-select fw-bold border-2"></select>
                             </div>
                             <div class="accordion mt-3" id="advancedOptions">
                                 <div class="accordion-item border-0 bg-light rounded-3 overflow-hidden">
@@ -475,7 +471,7 @@ def render_ui():
                                 <th>GPA</th>
                                 <th>주소</th>
                                 <th>대중교통 소요시간(05시 기준) ℹ️</th>
-                                <th>체감 피로도(MFI) ℹ️️</th>
+                                <th>체감 피로도(MFI) ℹ️</th>
                                 <th>AI 만족도 ℹ️</th>
                             </tr>
                         </thead>
@@ -550,21 +546,10 @@ def render_ui():
                         }
                         box.appendChild(opt);
                     });
-                    changeHospitalWatermark();
                 } else {
                     let opt = document.createElement('option');
                     opt.value = ""; opt.textContent = "해당 조건의 병원이 없습니다";
                     box.appendChild(opt);
-                }
-            }
-
-            function changeHospitalWatermark() {
-                let hospital = document.getElementById('hospital_select').value;
-                let logoImg = document.getElementById('watermarkLogo');
-                if (hospital.includes('방중')) {
-                    logoImg.style.opacity = '0.20'; // 방중 병원 선택 시 조금 더 진하게 강조
-                } else {
-                    logoImg.style.opacity = '0.15';
                 }
             }
 
