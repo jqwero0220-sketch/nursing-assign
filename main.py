@@ -10,7 +10,7 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-3.1)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-3.2)")
 
 SECRET_PASSWORD = "ansan king"
 
@@ -250,12 +250,12 @@ async def assign_hospital_from_file(
                 "ai_report": ai_rep, "is_eligible": False
             })
 
-    optimization_method = "Transit DB & MFI Sorting (Calendar CAPA Applied)"
+    optimization_method = "Transit DB & MFI Sorting (Wide Layout Applied)"
     if use_hungarian and len(eligible_list) > 1:
         cost_matrix = np.array([[item["student"]["fatigue_index"] for _ in range(len(eligible_list))] for item in eligible_list])
         row_ind, _ = linear_sum_assignment(cost_matrix)
         eligible_list = [eligible_list[i] for i in row_ind]
-        optimization_method = "Transit DB & SciPy Hungarian Optimization (Calendar CAPA Applied)"
+        optimization_method = "Transit DB & SciPy Hungarian Optimization (Wide Layout Applied)"
     else:
         eligible_list.sort(key=lambda x: x["student"]["fatigue_index"])
 
@@ -303,19 +303,21 @@ def render_ui():
         <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
             body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; }
-            .navbar-custom { background-color: #0f172a; }
+            .navbar-custom { background-color: #0f172a; padding-left: 30px; padding-right: 30px; }
             .card-custom { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); background: #ffffff; }
             .card-header-custom { background: #f8fafc; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: #0f172a; border-radius: 16px 16px 0 0 !important; }
-            .btn-run { background: linear-gradient(135deg, #03c75a, #02873c); border: none; font-weight: 700; padding: 12px; border-radius: 10px; color: white; transition: all 0.2s; }
+            .btn-run { background: linear-gradient(135deg, #03c75a, #02873c); border: none; font-weight: 700; padding: 14px; border-radius: 10px; color: white; transition: all 0.2s; font-size: 16px; }
             .btn-run:hover { background: linear-gradient(135deg, #02873c, #01632c); }
             .btn-excel { background: linear-gradient(135deg, #059669, #047857); border: none; font-weight: 700; border-radius: 8px; color: white; }
-            .table-custom th { background-color: #0f172a; color: white; text-align: center; font-size: 13.5px; cursor: help; }
-            .table-custom td { vertical-align: middle; text-align: center; font-size: 13.5px; }
-            .rank-badge { background: #d97706; color: white; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 11.5px; }
+            .table-custom th { background-color: #0f172a; color: white; text-align: center; font-size: 14px; cursor: help; padding: 12px; }
+            .table-custom td { vertical-align: middle; text-align: center; font-size: 14px; padding: 12px; }
+            .rank-badge { background: #d97706; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; }
             .mfi-badge { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe; }
             .auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%); z-index: 9999; display: flex; justify-content: center; align-items: center; }
             .auth-card { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(20px); width: 90%; max-width: 400px; padding: 40px 32px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; color: white; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
             .auth-input { background: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.15); color: #000000 !important; font-weight: 700; border-radius: 12px; padding: 14px; text-align: center; }
+            /* 좌우 여백을 넓히고 화면을 시원하게 채우기 위한 설정 */
+            .wide-container { max-width: 96% !important; margin: 0 auto; }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
@@ -323,42 +325,42 @@ def render_ui():
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-3.1)</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-3.2)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
                 <button onclick="verifyPassword()" class="btn btn-success w-100 fw-bold py-2">시스템 접속하기</button>
             </div>
         </div>
 
         <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
-            <div class="container px-4">
-                <span class="navbar-brand fw-bold">로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
-                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-3.1 (캘린더 기간 설정)</span>
+            <div class="container-fluid px-4">
+                <span class="navbar-brand fw-bold fs-5">로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
+                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-3.2 (와이드 레이아웃)</span>
             </div>
         </nav>
 
-        <div class="container pb-5" style="max-width: 1140px;">
+        <div class="container-fluid wide-container pb-5">
             <div class="row g-4 mb-4">
-                <div class="col-md-6">
+                <div class="col-lg-6">
                     <div class="card card-custom h-100">
-                        <div class="card-header card-header-custom py-3 px-4">실습 교과목 및 병원 조건 설정</div>
+                        <div class="card-header card-header-custom py-3 px-4 fs-6">실습 교과목 및 병원 조건 설정</div>
                         <div class="card-body p-4">
                             <div class="row g-2 mb-3">
                                 <div class="col-4">
                                     <label class="form-label fw-bold fs-7">학년 선택</label>
-                                    <select id="grade_select" class="form-select form-select-sm fw-bold text-success">
+                                    <select id="grade_select" class="form-select fw-bold text-success">
                                         <option value="3학년" selected>3학년</option>
                                         <option value="4학년">4학년</option>
                                     </select>
                                 </div>
                                 <div class="col-4">
                                     <label class="form-label fw-bold fs-7">학년도</label>
-                                    <select id="year_select" class="form-select form-select-sm fw-bold" onchange="updateHospitals()">
+                                    <select id="year_select" class="form-select fw-bold" onchange="updateHospitals()">
                                         <option value="2026">2026학년도</option>
                                     </select>
                                 </div>
                                 <div class="col-4">
                                     <label class="form-label fw-bold fs-7">학기 선택</label>
-                                    <select id="semester_select" class="form-select form-select-sm fw-bold text-primary" onchange="updateHospitals()">
+                                    <select id="semester_select" class="form-select fw-bold text-primary" onchange="updateHospitals()">
                                         <option value="1학기">1학기</option>
                                         <option value="2학기" selected>2학기</option>
                                     </select>
@@ -393,30 +395,29 @@ def render_ui():
                                     </h2>
                                     <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#advancedOptions">
                                         <div class="accordion-body pt-2 pb-3">
-                                            <!-- 달력 기간 선택 UI 추가 -->
                                             <div class="row g-2 mb-3">
                                                 <div class="col-6">
                                                     <label class="form-label fs-7 fw-bold mb-1">실습 시작일 (From)</label>
-                                                    <input type="date" id="start_date" class="form-control form-control-sm" value="2026-09-01">
+                                                    <input type="date" id="start_date" class="form-control" value="2026-09-01">
                                                 </div>
                                                 <div class="col-6">
                                                     <label class="form-label fs-7 fw-bold mb-1">실습 종료일 (To)</label>
-                                                    <input type="date" id="end_date" class="form-control form-control-sm" value="2026-09-14">
+                                                    <input type="date" id="end_date" class="form-control" value="2026-09-18">
                                                 </div>
                                             </div>
                                             <div class="row g-2 mb-3">
                                                 <div class="col-6">
                                                     <label class="form-label fs-7 fw-bold mb-1" title="해당 기간 전체 수용 가능 인원">기간별 최대정원</label>
-                                                    <input type="number" id="max_period_cap" class="form-control form-control-sm" value="50">
+                                                    <input type="number" id="max_period_cap" class="form-control" value="50">
                                                 </div>
                                                 <div class="col-6">
                                                     <label class="form-label fs-7 fw-bold mb-1" title="선택한 병원별 수용 가능 최대 인원">기관별 최대정원</label>
-                                                    <input type="number" id="max_hospital_cap" class="form-control form-control-sm" value="10">
+                                                    <input type="number" id="max_hospital_cap" class="form-control" value="10">
                                                 </div>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label fs-7 fw-bold mb-1">성별 조건</label>
-                                                <select id="gender_criteria" class="form-select form-select-sm">
+                                                <select id="gender_criteria" class="form-select">
                                                     <option value="무관" selected>무관</option>
                                                     <option value="남성만">남성만</option>
                                                     <option value="여성만">여성만</option>
@@ -425,11 +426,11 @@ def render_ui():
                                             <div class="row g-2 mb-2">
                                                 <div class="col-6">
                                                     <label class="form-label fs-7 fw-bold mb-1">최소 GPA</label>
-                                                    <input type="number" step="0.1" id="min_gpa" class="form-control form-control-sm" placeholder="예: 3.5">
+                                                    <input type="number" step="0.1" id="min_gpa" class="form-control" placeholder="예: 3.5">
                                                 </div>
                                                 <div class="col-6">
                                                     <label class="form-label fs-7 fw-bold mb-1">출생연도 이후</label>
-                                                    <input type="number" id="birth_year" class="form-control form-control-sm" placeholder="예: 2003">
+                                                    <input type="number" id="birth_year" class="form-control" placeholder="예: 2003">
                                                 </div>
                                             </div>
                                             <div class="form-check mt-2" title="학생의 과거 실습 이력과 현재 배정 병원이 겹치는 경우 배정 대상에서 자동 제외합니다.">
@@ -451,17 +452,17 @@ def render_ui():
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-lg-6">
                     <div class="card card-custom h-100">
-                        <div class="card-header card-header-custom py-3 px-4">학생 명단 업로드</div>
+                        <div class="card-header card-header-custom py-3 px-4 fs-6">학생 명단 업로드</div>
                         <div class="card-body p-4 d-flex flex-column justify-content-between">
-                            <div class="border border-2 border-dashed rounded-3 p-4 text-center bg-light mb-3">
-                                <p class="fw-bold mb-1 text-dark">엑셀 컬럼 형식</p>
-                                <p class="text-secondary small mb-2">학번, 이름, 성별, GPA, 출생연도, 주소, 과거실습지</p>
-                                <input type="file" id="excel_file" class="form-control" accept=".csv, .xlsx">
+                            <div class="border border-2 border-dashed rounded-3 p-5 text-center bg-light mb-4">
+                                <h5 class="fw-bold mb-2 text-dark">엑셀 컬럼 형식 안내</h5>
+                                <p class="text-secondary mb-3">학번, 이름, 성별, GPA, 출생연도, 주소, 과거실습지</p>
+                                <input type="file" id="excel_file" class="form-control form-control-lg" accept=".csv, .xlsx">
                             </div>
                             <button onclick="runAssignment()" class="btn btn-run w-100 shadow-sm">
-                                최적 배정 실행
+                                🚀 실시간 최적 배정 실행하기
                             </button>
                         </div>
                     </div>
@@ -472,7 +473,7 @@ def render_ui():
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
                         <h5 class="fw-bold mb-2">배정 결과 요약</h5>
-                        <p id="summary_text" class="mb-0"></p>
+                        <p id="summary_text" class="mb-0 fs-5"></p>
                     </div>
                     <button class="btn btn-excel px-4 py-2 shadow-sm" onclick="exportToExcel()">결과 엑셀 다운로드</button>
                 </div>
@@ -488,7 +489,7 @@ def render_ui():
                                 <th>이름</th>
                                 <th>GPA</th>
                                 <th>주소</th>
-                                <th title="수도권 법정동별 실제 대중교통망을 바탕으로 이른 출근 시간대(오전 05시) 기준 소요 시간을 산출한 데이터입니다.">실시간 대중교통 소요시간(05시 기준) ℹ️</th>
+                                <th title="수도권 법정동별 실제 대중교통망을 바탕으로 이른 출근 시간대(오전 05시) 기준 소요 시간을 산출한 데이터입니다.">실시간 대중교통 소요시간(05시 기준) ℹ️️</th>
                                 <th title="MFI (Modified Fatigue Index): 통학 소요 시간 및 환승 횟수, 도보 이동 거리 등 학생이 겪는 신체적·시간적 통학 피로도를 수치화한 지수입니다.">체감 피로도(MFI) ℹ️</th>
                                 <th title="학생의 GPA, 통학 시간, 피로도(MFI) 등의 변수를 머신러닝(RandomForest) 모델에 입력하여 예측한 종합 만족도 점수입니다.">AI 만족도 ℹ️</th>
                             </tr>
