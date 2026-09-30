@@ -10,7 +10,7 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-3.0)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-3.1)")
 
 SECRET_PASSWORD = "ansan king"
 
@@ -182,7 +182,8 @@ async def get_hospitals(year: str, semester: str, subject: str):
 async def assign_hospital_from_file(
     target_hospital: str = Form(...),
     grade: str = Form("3학년"),
-    period: str = Form("1주차"),
+    start_date: str = Form(""),
+    end_date: str = Form(""),
     max_period_capacity: int = Form(50),
     max_hospital_capacity: int = Form(10),
     gender_criteria: str = Form("무관"),
@@ -249,26 +250,22 @@ async def assign_hospital_from_file(
                 "ai_report": ai_rep, "is_eligible": False
             })
 
-    optimization_method = "Transit DB & MFI Sorting (CAPA Applied)"
+    optimization_method = "Transit DB & MFI Sorting (Calendar CAPA Applied)"
     if use_hungarian and len(eligible_list) > 1:
         cost_matrix = np.array([[item["student"]["fatigue_index"] for _ in range(len(eligible_list))] for item in eligible_list])
         row_ind, _ = linear_sum_assignment(cost_matrix)
         eligible_list = [eligible_list[i] for i in row_ind]
-        optimization_method = "Transit DB & SciPy Hungarian Optimization (CAPA Applied)"
+        optimization_method = "Transit DB & SciPy Hungarian Optimization (Calendar CAPA Applied)"
     else:
         eligible_list.sort(key=lambda x: x["student"]["fatigue_index"])
 
     final_results = []
-    
-    # 3, 4번 피드백 반영: 기간별 인원 및 기관별 최대 수용 인원(CAPA) 제한 적용
     assigned_count = 0
     for rank_idx, item in enumerate(eligible_list, start=1):
         stu = item["student"]
         
-        # 기관별 정원 및 기간별 정원 초과 체크
         if assigned_count >= max_hospital_capacity or assigned_count >= max_period_capacity:
-            # 정원 초과 시 미배정 처리
-            ai_rep = f"[AI 분석] {stu['name']} 학생은 {target_hospital}의 기관/기간별 수용 정원(CAPA) 마감으로 초과 대기 처리되었습니다."
+            ai_rep = f"[AI 분석] {stu['name']} 학생은 {target_hospital}의 기간({start_date}~{end_date}) 수용 정원(CAPA) 마감으로 대기 처리되었습니다."
             ineligible_list.append({
                 "rank": None, "student_id": stu["student_id"], "name": stu["name"], "gender": stu["gender"],
                 "gpa": stu["gpa"], "birth_year": stu["birth_year"], "address": stu["address"],
@@ -279,7 +276,7 @@ async def assign_hospital_from_file(
 
         assigned_count += 1
         sat_score = ml_engine.predict(stu["travel_time_minutes"], stu["transfers"], stu["walk_time_minutes"], stu["gpa"], stu["fatigue_index"])
-        ai_rep = generate_ai_report(stu["name"], target_hospital, rank_idx, stu["fatigue_index"], stu["travel_time_minutes"], True, f"{period} 배정 완료")
+        ai_rep = generate_ai_report(stu["name"], target_hospital, rank_idx, stu["fatigue_index"], stu["travel_time_minutes"], True, f"{start_date}~{end_date} 배정 완료")
 
         final_results.append({
             "rank": assigned_count, "student_id": stu["student_id"], "name": stu["name"], "gender": stu["gender"],
@@ -326,7 +323,7 @@ def render_ui():
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-3.0)</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-3.1)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
                 <button onclick="verifyPassword()" class="btn btn-success w-100 fw-bold py-2">시스템 접속하기</button>
             </div>
@@ -335,7 +332,7 @@ def render_ui():
         <nav class="navbar navbar-dark navbar-custom shadow-sm mb-4">
             <div class="container px-4">
                 <span class="navbar-brand fw-bold">로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
-                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-3.0</span>
+                <span class="badge bg-success px-3 py-2 rounded-pill" style="background-color: #03c75a !important;">v2026.09.10-3.1 (캘린더 기간 설정)</span>
             </div>
         </nav>
 
@@ -391,21 +388,28 @@ def render_ui():
                                 <div class="accordion-item border-0 bg-light rounded-3">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed bg-light fw-bold text-secondary fs-7 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced">
-                                            기간 및 정원(CAPA), 자격 조건 상세 설정
+                                            캘린더 기간, 정원(CAPA), 자격 조건 상세 설정
                                         </button>
                                     </h2>
                                     <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#advancedOptions">
                                         <div class="accordion-body pt-2 pb-3">
+                                            <!-- 달력 기간 선택 UI 추가 -->
                                             <div class="row g-2 mb-3">
-                                                <div class="col-4">
-                                                    <label class="form-label fs-7 fw-bold mb-1">실습 기간(주차)</label>
-                                                    <input type="text" id="period_input" class="form-control form-control-sm" value="1주차">
+                                                <div class="col-6">
+                                                    <label class="form-label fs-7 fw-bold mb-1">실습 시작일 (From)</label>
+                                                    <input type="date" id="start_date" class="form-control form-control-sm" value="2026-09-01">
                                                 </div>
-                                                <div class="col-4">
-                                                    <label class="form-label fs-7 fw-bold mb-1" title="해당 기간(주차) 전체 수용 가능 인원">기간별 최대정원</label>
+                                                <div class="col-6">
+                                                    <label class="form-label fs-7 fw-bold mb-1">실습 종료일 (To)</label>
+                                                    <input type="date" id="end_date" class="form-control form-control-sm" value="2026-09-14">
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <label class="form-label fs-7 fw-bold mb-1" title="해당 기간 전체 수용 가능 인원">기간별 최대정원</label>
                                                     <input type="number" id="max_period_cap" class="form-control form-control-sm" value="50">
                                                 </div>
-                                                <div class="col-4">
+                                                <div class="col-6">
                                                     <label class="form-label fs-7 fw-bold mb-1" title="선택한 병원별 수용 가능 최대 인원">기관별 최대정원</label>
                                                     <input type="number" id="max_hospital_cap" class="form-control form-control-sm" value="10">
                                                 </div>
@@ -542,7 +546,8 @@ def render_ui():
                 let form = new FormData();
                 form.append('target_hospital', hospital);
                 form.append('grade', document.getElementById('grade_select').value);
-                form.append('period', document.getElementById('period_input').value);
+                form.append('start_date', document.getElementById('start_date').value);
+                form.append('end_date', document.getElementById('end_date').value);
                 form.append('max_period_capacity', document.getElementById('max_period_cap').value);
                 form.append('max_hospital_capacity', document.getElementById('max_hospital_cap').value);
                 form.append('gender_criteria', document.getElementById('gender_criteria').value);
@@ -563,10 +568,11 @@ def render_ui():
                 currentHospital = data.target_hospital;
 
                 let gradeVal = document.getElementById('grade_select').value;
-                let periodVal = document.getElementById('period_input').value;
+                let sDate = document.getElementById('start_date').value;
+                let eDate = document.getElementById('end_date').value;
 
                 document.getElementById('summary_box').style.display = 'block';
-                document.getElementById('summary_text').innerHTML = `<b>[${gradeVal}] ${periodVal} 배정 결과</b> | <b>병원:</b> ${hospital} | <b>총 배정/대상:</b> ${data.eligible_count}/${data.total_students}명`;
+                document.getElementById('summary_text').innerHTML = `<b>[${gradeVal}] 실습 기간: ${sDate} ~ ${eDate}</b> | <b>병원:</b> ${hospital} | <b>배정/대상:</b> ${data.eligible_count}/${data.total_students}명`;
 
                 let tbody = document.getElementById('result_body');
                 tbody.innerHTML = '';
