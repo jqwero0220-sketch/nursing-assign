@@ -10,7 +10,7 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-4.1)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-4.2)")
 
 SECRET_PASSWORD = "ansan king"
 
@@ -250,12 +250,12 @@ async def assign_hospital_from_file(
                 "ai_report": ai_rep, "is_eligible": False
             })
 
-    optimization_method = "Transit DB & MFI Sorting (Dynamic Hospital BG)"
+    optimization_method = "Transit DB & MFI Sorting (Watermark Logo Applied)"
     if use_hungarian and len(eligible_list) > 1:
         cost_matrix = np.array([[item["student"]["fatigue_index"] for _ in range(len(eligible_list))] for item in eligible_list])
         row_ind, _ = linear_sum_assignment(cost_matrix)
         eligible_list = [eligible_list[i] for i in row_ind]
-        optimization_method = "Transit DB & SciPy Hungarian Optimization (Dynamic Hospital BG)"
+        optimization_method = "Transit DB & SciPy Hungarian Optimization (Watermark Logo Applied)"
     else:
         eligible_list.sort(key=lambda x: x["student"]["fatigue_index"])
 
@@ -304,15 +304,24 @@ def render_ui():
         <style>
             body { 
                 font-family: 'Pretendard', sans-serif; 
-                /* 기본 배경에 세련된 의료 인테리어 이미지를 반투명하게 깔아줌 */
-                background: linear-gradient(rgba(241, 245, 249, 0.93), rgba(241, 245, 249, 0.93)), 
-                            url('https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
-                background-size: cover;
+                background-color: #f1f5f9;
                 color: #1e293b; 
-                transition: background-image 0.5s ease-in-out;
+            }
+            /* 배경 워터마크 로고 레이어 */
+            .watermark-bg {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 55vw;
+                max-width: 700px;
+                opacity: 0.06; /* 아주 연하게 워터마크처럼 깔림 */
+                z-index: -1;
+                pointer-events: none;
+                transition: all 0.4s ease-in-out;
             }
             .navbar-medical { background: linear-gradient(135deg, #0f172a, #1e3a8a); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-            .card-medical { border: none; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); transition: transform 0.2s; }
+            .card-medical { border: none; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.93); backdrop-filter: blur(10px); transition: transform 0.2s; }
             .card-header-medical { background: #ffffff; border-bottom: 2px solid #f1f5f9; font-weight: 700; color: #1e3a8a; border-radius: 16px 16px 0 0 !important; padding: 18px 24px; font-size: 16px; }
             .btn-medical-run { background: linear-gradient(135deg, #0d9488, #0f766e); border: none; font-weight: 700; padding: 16px; border-radius: 12px; color: white; font-size: 16px; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3); transition: all 0.2s; }
             .btn-medical-run:hover { background: linear-gradient(135deg, #0f766e, #115e59); transform: translateY(-1px); }
@@ -327,15 +336,18 @@ def render_ui():
             .auth-card { background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(20px); width: 90%; max-width: 400px; padding: 40px 32px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; color: white; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
             .auth-input { background: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.15); color: #000000 !important; font-weight: 700; border-radius: 12px; padding: 14px; text-align: center; }
             
-            .dashboard-container { max-width: 97% !important; margin: 0 auto; }
+            .dashboard-container { max-width: 97% !important; margin: 0 auto; position: relative; z-index: 1; }
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     </head>
     <body>
+        <!-- 화면 중앙에 은은하게 깔리는 다이나믹 워터마크 이미지 -->
+        <img id="watermarkLogo" class="watermark-bg" src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80" alt="Hospital Watermark">
+
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-4.1)</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-4.2)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
                 <button onclick="verifyPassword()" class="btn w-100 fw-bold py-2" style="background-color: #0d9488; color: white;">시스템 접속하기</button>
             </div>
@@ -344,7 +356,7 @@ def render_ui():
         <nav class="navbar navbar-dark navbar-medical shadow-sm mb-4 py-3">
             <div class="container-fluid px-4">
                 <span class="navbar-brand fw-bold fs-5">🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
-                <span class="badge px-3 py-2 rounded-pill" style="background-color: #0d9488 !important; font-size: 13px;">v2026.09.10-4.1 (다이나믹 병원 배경)</span>
+                <span class="badge px-3 py-2 rounded-pill" style="background-color: #0d9488 !important; font-size: 13px;">v2026.09.10-4.2 (병원 로고 워터마크)</span>
             </div>
         </nav>
 
@@ -394,8 +406,8 @@ def render_ui():
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-bold text-secondary">배정 대상 병원 선택</label>
-                                <!-- 병원을 바꿀 때마다 배경 이미지가 다이나믹하게 바뀌도록 onchange 함수 추가 -->
-                                <select id="hospital_select" class="form-select fw-bold border-2" onchange="changeHospitalBackground()"></select>
+                                <!-- 병원 선택 시 워터마크 로고가 동적으로 바뀌도록 연결 -->
+                                <select id="hospital_select" class="form-select fw-bold border-2" onchange="changeHospitalWatermark()"></select>
                             </div>
                             <div class="accordion mt-3" id="advancedOptions">
                                 <div class="accordion-item border-0 bg-light rounded-3 overflow-hidden">
@@ -523,20 +535,21 @@ def render_ui():
             }
             if(sessionStorage.getItem('auth')==='true') document.getElementById('authOverlay').style.display='none';
 
-            // 병원 선택에 따라 배경 이미지를 동적으로 바꿔주는 함수
-            function changeHospitalBackground() {
+            // 병원 선택에 따라 배경 워터마크 로고를 다이나믹하게 바꿔주는 함수
+            function changeHospitalWatermark() {
                 let hospital = document.getElementById('hospital_select').value;
-                let bgUrl = 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=1920&q=80'; // 기본 병원 배경
+                let logoImg = document.getElementById('watermarkLogo');
                 
-                if (hospital.includes('성모')) {
-                    bgUrl = 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1920&q=80'; // 대학병원 로비/건물 느낌
-                } else if (hospital.includes('고려대') || hospital.includes('아주')) {
-                    bgUrl = 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1920&q=80'; // 첨단 의료시설 느낌
-                } else if (hospital.includes('보건소') || hospital.includes('센터')) {
-                    bgUrl = 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1920&q=80'; // 지역사회/보건 느낌
+                // 기본 대학병원 로고 이미지 (고려대안산병원 로고 예시 포함)
+                if (hospital.includes('고려대학교안산병원')) {
+                    logoImg.src = 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=800&q=80'; // 고려대 계열 상징 엠블럼 느낌
+                } else if (hospital.includes('성모')) {
+                    logoImg.src = 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80'; 
+                } else if (hospital.includes('아주')) {
+                    logoImg.src = 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=800&q=80';
+                } else {
+                    logoImg.src = 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=80';
                 }
-
-                document.body.style.backgroundImage = `linear-gradient(rgba(241, 245, 249, 0.93), rgba(241, 245, 249, 0.93)), url('${bgUrl}')`;
             }
 
             async function updateHospitals() {
@@ -555,7 +568,7 @@ def render_ui():
                         opt.value = h; opt.textContent = h;
                         box.appendChild(opt);
                     });
-                    changeHospitalBackground(); // 병원 리스트 갱신 후 첫 번째 병원 배경 적용
+                    changeHospitalWatermark();
                 } else {
                     let opt = document.createElement('option');
                     opt.value = ""; opt.textContent = "해당 조건의 병원이 없습니다";
