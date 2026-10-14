@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional, Tuple
 import pandas as pd
 import numpy as np
@@ -10,7 +10,7 @@ import uvicorn
 from sklearn.ensemble import RandomForestClassifier
 from scipy.optimize import linear_sum_assignment
 
-app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-6.3)")
+app = FastAPI(title="간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-7.0)")
 
 SECRET_PASSWORD = "ansan king"
 
@@ -143,10 +143,10 @@ class SatisfactionMLModel:
 
 ml_engine = SatisfactionMLModel()
 
-def generate_ai_report(name: str, hospital: str, rank: Optional[int], composite_score: float, is_eligible: bool, note: str) -> str:
+def generate_ai_report(name: str, hospital: str, rank: Optional[int], composite_score: float, pref_status: str, is_eligible: bool, note: str) -> str:
     if not is_eligible:
         return f"[AI 분석] {name} 학생은 {note}로 인해 {hospital} 배정 자격 미달입니다."
-    return f"[AI 리포트] {name} 학생은 거리 및 희망도 가중치가 반영된 종합 매칭 지수({composite_score})를 통해 {hospital} {rank}순위로 배정되었습니다."
+    return f"[AI 리포트] {name} 학생은 통학 거리 및 희망 지망 반영({pref_status})을 통해 종합 매칭 지수 {composite_score}점으로 {hospital} {rank}순위 배정되었습니다."
 
 class PasswordVerifyRequest(BaseModel):
     password: str
@@ -186,6 +186,7 @@ async def assign_hospital_from_file(
     target_hospital: str = Form(...),
     grade: str = Form("3학년"),
     semester: str = Form("1학기"),
+    subject: str = Form("성인1"),
     start_date: str = Form(""),
     end_date: str = Form(""),
     max_period_capacity: int = Form(50),
@@ -206,20 +207,52 @@ async def assign_hospital_from_file(
         contents = await file.read()
         df = pd.read_csv(io.BytesIO(contents)) if file.filename.endswith('.csv') else pd.read_excel(io.BytesIO(contents))
 
+        # 해당 과목 또는 전체 병원 리스트 확보 (오타 및 외부 병원명 검증용)
+        valid_hospitals = []
+        if subject == "ALL":
+            for s_list in MASTER_HOSPITAL_DB.get(grade, {}).get(semester, {}).values():
+                valid_hospitals.extend(s_list)
+            valid_hospitals = list(set(valid_hospitals))
+        else:
+            valid_hospitals = MASTER_HOSPITAL_DB.get(grade, {}).get(semester, {}).get(subject, [])
+
         students = []
         for _, row in df.iterrows():
             address = str(row.get('주소', ''))
             past_hospital = str(row.get('과거실습지', ''))
-            pref_score = float(row.get('희망도점수', 3.0))
             
+            # 1, 2, 3지망 병원 데이터 읽기
+            pref_1 = str(row.get('1지망병원', '')).strip()
+            pref_2 = str(row.get('2지망병원', '')).strip()
+            pref_3 = str(row.get('3지망병원', '')).strip()
+
+            # 지망 점수 산정 (공식 병원 DB와 일치하는지 엄격 대조: 빈칸 및 오타 자동 제외)
+            pref_score = 0.0
+            pref_status = "지망 없음/미반영"
+            
+            if target_hospital in valid_hospitals:
+                if pref_1 == target_hospital:
+                    pref_score = 100.0
+                    pref_status = "1지망 일치"
+                elif pref_2 == target_hospital:
+                    pref_score = 70.0
+                    pref_status = "2지망 일치"
+                elif pref_3 == target_hospital:
+                    pref_score = 40.0
+                    pref_status = "3지망 일치"
+                else:
+                    pref_score = 10.0  # 지망에 없더라도 기본 점수 부여
+                    pref_status = "비지망(기본)"
+            else:
+                pref_score = 50.0
+
             travel_time, transfers, walk_time = calculate_ultra_dense_transit(address, target_hospital)
             unique_offset = (hash(str(row['학번'])) % 5) - 2
             travel_time = max(15, travel_time + unique_offset)
             mfi = round(travel_time + (transfers * 12.0) + (walk_time * 1.2), 1)
 
             dist_normalized = max(0, min(100, 100 - ((travel_time - 15) / 75 * 100)))
-            pref_normalized = max(0, min(100, (pref_score - 1) / 4 * 100))
-            composite_score = round((dist_normalized * distance_weight) + (pref_normalized * preference_weight), 1)
+            composite_score = round((dist_normalized * distance_weight) + (pref_score * preference_weight), 1)
 
             students.append({
                 "student_id": str(row['학번']),
@@ -229,7 +262,7 @@ async def assign_hospital_from_file(
                 "birth_year": int(row['출생연도']),
                 "address": address,
                 "past_hospital": past_hospital,
-                "preference_score": pref_score,
+                "preference_status": pref_status,
                 "travel_time_minutes": travel_time,
                 "transfers": transfers,
                 "walk_time_minutes": walk_time,
@@ -255,7 +288,7 @@ async def assign_hospital_from_file(
         if is_ok:
             eligible_list.append({"student": stu, "status_note": note})
         else:
-            ai_rep = generate_ai_report(stu["name"], target_hospital, None, stu["composite_score"], False, note)
+            ai_rep = generate_ai_report(stu["name"], target_hospital, None, stu["composite_score"], stu["preference_status"], False, note)
             ineligible_list.append({
                 "rank": None, "student_id": stu["student_id"], "name": stu["name"], "gender": stu["gender"],
                 "gpa": stu["gpa"], "birth_year": stu["birth_year"], "address": stu["address"],
@@ -263,12 +296,12 @@ async def assign_hospital_from_file(
                 "ai_satisfaction_score": None, "ai_report": ai_rep, "is_eligible": False
             })
 
-    optimization_method = f"Distance({int(distance_weight*100)}%) & Preference({int(preference_weight*100)}%) Weekly Batch"
+    optimization_method = f"Distance({int(distance_weight*100)}%) & Text Preference Matching (v7.0)"
     if use_hungarian and len(eligible_list) > 1:
         cost_matrix = np.array([[100 - item["student"]["composite_score"] for _ in range(len(eligible_list))] for item in eligible_list])
         row_ind, _ = linear_sum_assignment(cost_matrix)
         eligible_list = [eligible_list[i] for i in row_ind]
-        optimization_method = f"SciPy Hungarian Optimization (Dist {int(distance_weight*100)}% : Pref {int(preference_weight*100)}%)"
+        optimization_method = f"SciPy Hungarian Optimization (Text Pref Verified)"
     else:
         eligible_list.sort(key=lambda x: x["student"]["composite_score"], reverse=True)
 
@@ -289,7 +322,7 @@ async def assign_hospital_from_file(
 
         assigned_count += 1
         sat_score = ml_engine.predict(stu["travel_time_minutes"], stu["transfers"], stu["walk_time_minutes"], stu["gpa"], stu["fatigue_index"])
-        ai_rep = generate_ai_report(stu["name"], target_hospital, rank_idx, stu["composite_score"], True, f"{start_date}~{end_date} 배정 완료")
+        ai_rep = generate_ai_report(stu["name"], target_hospital, rank_idx, stu["composite_score"], stu["preference_status"], True, f"{start_date}~{end_date} 배정 완료")
 
         final_results.append({
             "rank": assigned_count, "student_id": stu["student_id"], "name": stu["name"], "gender": stu["gender"],
@@ -337,7 +370,7 @@ def render_ui():
         <div id="authOverlay" class="auth-overlay">
             <div class="auth-card">
                 <h4 class="fw-bold mb-1">보안 서버 인증</h4>
-                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-6.3)</p>
+                <p class="text-secondary fs-7 mb-4">간호학과 스마트 실습지 최적 배정 시스템 (v2026.09.10-7.0)</p>
                 <input type="password" id="authPassword" class="form-control auth-input mb-3" placeholder="접속 암호 입력 (ansan king)" onkeyup="if(event.key==='Enter')verifyPassword()">
                 <button onclick="verifyPassword()" class="btn w-100 fw-bold py-2" style="background-color: #0d9488; color: white;">시스템 접속하기</button>
             </div>
@@ -345,8 +378,8 @@ def render_ui():
 
         <nav class="navbar navbar-dark navbar-medical shadow-sm mb-4 py-3">
             <div class="container-fluid px-4">
-                <span class="navbar-brand fw-bold fs-5"> 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
-                <span class="badge px-3 py-2 rounded-pill" style="background-color: #0d9488 !important; font-size: 13px;">v2026.09.10-6.3 (주간 단위 자동 캘린더)</span>
+                <span class="navbar-brand fw-bold fs-5">🏥 로켓단 | AI 기반 간호학과 실습지 최적 배정 시스템</span>
+                <span class="badge px-3 py-2 rounded-pill" style="background-color: #0d9488 !important; font-size: 13px;">v2026.09.10-7.0 (지망병원 텍스트 매칭 반영)</span>
             </div>
         </nav>
 
@@ -390,9 +423,8 @@ def render_ui():
                                     <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#advancedOptions">
                                         <div class="accordion-body pt-3 pb-3 bg-white border-top">
                                             
-                                            <!-- 입력형 가중치 설정 박스 -->
                                             <div class="p-3 mb-3 bg-light rounded-3 border">
-                                                <label class="form-label fw-bold text-primary mb-2"> 배정 기준 가중치 직접 입력 (합계 100%)</label>
+                                                <label class="form-label fw-bold text-primary mb-2">⚖️ 배정 기준 가중치 직접 입력 (합계 100%)</label>
                                                 <div class="row g-2 align-items-center">
                                                     <div class="col-6">
                                                         <label class="form-label fs-7 fw-bold text-secondary mb-1">통학 거리 가중치 (%)</label>
@@ -405,7 +437,6 @@ def render_ui():
                                                 </div>
                                             </div>
 
-                                            <!-- 주간 단위 자동 캘린더 설정 -->
                                             <div class="row g-2 mb-3">
                                                 <div class="col-6">
                                                     <label class="form-label fs-7 fw-bold mb-1 text-secondary">실습 시작일 (From)</label>
@@ -467,7 +498,7 @@ def render_ui():
                         <div class="card-body p-4 d-flex flex-column justify-content-between">
                             <div class="border border-2 border-dashed border-primary rounded-4 p-5 text-center bg-light mb-4">
                                 <h5 class="fw-bold mb-2 text-primary">엑셀 파일 업로드</h5>
-                                <p class="text-secondary small mb-3">지원 형식: 학번, 이름, 성별, GPA, 출생연도, 주소, 과거실습지, <b>희망도점수(1~5)</b></p>
+                                <p class="text-secondary small mb-3">지원 형식: 학번, 이름, 성별, GPA, 출생연도, 주소, 과거실습지, <b>1지망병원, 2지망병원, 3지망병원</b></p>
                                 <input type="file" id="excel_file" class="form-control form-control-lg border-2" accept=".csv, .xlsx">
                             </div>
                             <button onclick="runAssignment()" class="btn btn-medical-run w-100 shadow-sm">
@@ -498,7 +529,7 @@ def render_ui():
                                 <th>이름</th>
                                 <th>GPA</th>
                                 <th>주소</th>
-                                <th>희망도 점수 ℹ️</th>
+                                <th>지망 반영 상태 ℹ️</th>
                                 <th>소요시간 ℹ️</th>
                                 <th>종합 매칭점수 ℹ️</th>
                                 <th>AI 만족도 ℹ️</th>
@@ -522,7 +553,6 @@ def render_ui():
             }
             if(sessionStorage.getItem('auth')==='true') document.getElementById('authOverlay').style.display='none';
 
-            // 시작일 선택 시 자동으로 5일 뒤(1주일 실습 단위)를 종료일로 세팅하는 함수
             function onStartDateChange() {
                 let startInput = document.getElementById('start_date');
                 let endInput = document.getElementById('end_date');
@@ -530,7 +560,6 @@ def render_ui():
 
                 if (startInput.value) {
                     let startDate = new Date(startInput.value);
-                    // 4일 뒤(월~금 기준 총 5일 단위) 혹은 6일 뒤(7일) -> 주간 실습이므로 4일 더해 금요일로 맞춤 (총 5일)
                     startDate.setDate(startDate.getDate() + 4); 
                     let year = startDate.getFullYear();
                     let month = String(startDate.getMonth() + 1).padStart(2, '0');
@@ -542,7 +571,6 @@ def render_ui():
             function syncWeights(changed) {
                 let distInput = document.getElementById('dist_input');
                 let prefInput = document.getElementById('pref_input');
-                
                 let distVal = parseInt(distInput.value) || 0;
                 let prefVal = parseInt(prefInput.value) || 0;
 
@@ -640,7 +668,7 @@ def render_ui():
                         let opt = document.createElement('option');
                         opt.value = h; 
                         if (h.includes('방중')) {
-                            opt.textContent = h + " [방학중 운영]";
+                            opt.textContent = h + " 🏖️[방학중 운영]";
                         } else {
                             opt.textContent = h;
                         }
@@ -672,6 +700,7 @@ def render_ui():
                 form.append('target_hospital', hospital);
                 form.append('grade', document.getElementById('grade_select').value);
                 form.append('semester', document.getElementById('semester_select').value);
+                form.append('subject', document.getElementById('subject_select').value);
                 form.append('start_date', document.getElementById('start_date').value);
                 form.append('end_date', document.getElementById('end_date').value);
                 form.append('max_period_capacity', document.getElementById('max_period_cap').value);
@@ -714,7 +743,7 @@ def render_ui():
                         <td><b>${r.name}</b></td>
                         <td>${r.gpa}</td>
                         <td class="text-secondary small text-start">${r.address}</td>
-                        <td><span class="badge bg-info text-dark">${r.preference_score}점</span></td>
+                        <td><span class="badge bg-info text-dark">${r.ai_report.includes('지망') ? r.ai_report.split('을 통해')[0].split('학생은 ')[1] : '일반반영'}</span></td>
                         <td><b>${r.travel_time_minutes}분</b></td>
                         <td><span class="mfi-badge">${r.composite_score}점</span></td>
                         <td><span class="badge bg-success">${r.ai_satisfaction_score}점</span></td>
