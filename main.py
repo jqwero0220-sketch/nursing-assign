@@ -73,7 +73,23 @@ if not _ENV_PASSWORD:
     print("[경고] APP_PASSWORD 환경변수가 없어 데모용 기본 암호를 사용합니다. 배포 전 반드시 설정하세요.")
 APP_PASSWORD = _ENV_PASSWORD or "ansan king"
 TOKEN_TTL_SEC = 8 * 60 * 60
-_TOKENS: Dict[str, float] = {}
+_TOKEN_SECRET = hashlib.sha256(("tok|" + APP_PASSWORD).encode("utf-8")).digest()
+
+
+def _make_token() -> str:
+    """서명된 토큰: '만료시각.서명'. 서버가 재시작돼도 암호가 같으면 계속 유효하다."""
+    exp = str(int(time.time()) + TOKEN_TTL_SEC)
+    sig = hmac.new(_TOKEN_SECRET, exp.encode(), hashlib.sha256).hexdigest()
+    return f"{exp}.{sig}"
+
+
+def _token_ok(token: Optional[str]) -> bool:
+    try:
+        exp, sig = str(token).split(".", 1)
+        good = hmac.new(_TOKEN_SECRET, exp.encode(), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(sig, good) and int(exp) >= time.time()
+    except Exception:
+        return False
 
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 MAX_STUDENTS = 2000
@@ -121,8 +137,8 @@ MASTER_HOSPITAL_DB = {
             ],
             "관리": [
                 "고려대학교구로병원", "단원병원", "서울특별시 서남병원",
-                "센트럴병원", "순천향대학교부천병원", "순천향대학교서울병원",
-                "시화병원", "중앙대학교광명병원(방중)"
+                "순천향대학교부천병원", "순천향대학교서울병원", "시화병원",
+                "아주대학교병원", "중앙대학교광명병원(방중)", "한림대학교동탄성심병원"
             ]
         },
         "2학기": {
@@ -857,19 +873,14 @@ class PasswordVerifyRequest(BaseModel):
 
 
 def _require_token(token: Optional[str]):
-    now = time.time()
-    for t in [t for t, exp in _TOKENS.items() if exp < now]:
-        _TOKENS.pop(t, None)
-    if not token or token not in _TOKENS:
+    if not _token_ok(token):
         raise HTTPException(status_code=401, detail="인증이 만료되었습니다. 다시 접속해 주세요.")
 
 
 @app.post("/api/v1/verify-password")
 async def verify_password(payload: PasswordVerifyRequest):
     if hmac.compare_digest(payload.password.encode("utf-8"), APP_PASSWORD.encode("utf-8")):
-        token = secrets.token_urlsafe(32)
-        _TOKENS[token] = time.time() + TOKEN_TTL_SEC
-        return {"status": "success", "token": token}
+        return {"status": "success", "token": _make_token()}
     raise HTTPException(status_code=401, detail="암호가 올바르지 않습니다.")
 
 
@@ -1248,7 +1259,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
   /* 인증·토스트 */
   .auth { position:fixed; inset:0; background:radial-gradient(circle at 50% 30%,#1e293b 0%,#0f172a 100%); z-index:100; display:flex; align-items:center; justify-content:center; padding:16px; }
   .auth-card { background:rgba(30,41,59,.92); width:100%; max-width:400px; padding:38px 30px; border-radius:22px; border:1px solid rgba(255,255,255,.1); text-align:center; color:#fff; }
-  .auth-card input { text-align:center; font-weight:700; margin:18px 0 8px; }
+  .auth-card input { text-align:center; font-weight:700; margin:18px 0 8px; color:#111; background:#fff; }
+  .auth-card input::placeholder { color:#6b7280; font-weight:500; }
   .toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); background:var(--navy); color:#fff; padding:12px 20px; border-radius:12px; font-size:14px; opacity:0; transition:all .25s; z-index:200; max-width:90vw; pointer-events:none; }
   .toast.show { opacity:1; transform:translateX(-50%); } .toast.err { background:#b91c1c; }
 
