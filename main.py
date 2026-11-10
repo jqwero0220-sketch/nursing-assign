@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v10.1 실습 기간 기본값: 시작일=오늘(휴일이면 다음 평일), 종료일=평일 10일(2주) 뒤
   v10.0 화면 정리(상세 설정 재구성, 지도 거리 항상 사용, 로고 아이콘·샘플 버튼 정리, 통학시간 "약" 표기)
   v9.9  병원별 정원을 화면에서 직접 입력(기본값: 2025-1 실제 배정 인원)
   v9.8  병원별 실제 정원(2025-1 실제 배정 인원) 사용 옵션
@@ -48,7 +49,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v10.0"
+APP_VERSION = "v10.1"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -1453,7 +1454,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <h4>실습 기간</h4>
         <div class="grid g2">
           <div><span class="lbl">실습 시작일</span><input type="date" id="startDate" onchange="onStartChange()"></div>
-          <div><span class="lbl">실습 종료일 (평일 5일 자동)</span><input type="date" id="endDate" onchange="checkDate(this)"></div>
+          <div><span class="lbl">실습 종료일 (시작일부터 2주 자동)</span><input type="date" id="endDate" onchange="checkDate(this)"></div>
         </div><div class="hint" id="dateErr" style="color:var(--bad);font-weight:700"></div>
 
         <h4>병원별 정원</h4>
@@ -1598,14 +1599,15 @@ function dateProblem(s) {
   if (HOLIDAYS.has(s) || FIXED.has(s.slice(5))) return '공휴일·명절 연휴는 실습일로 지정할 수 없습니다.';
   return null;
 }
+const PRACTICUM_DAYS = 10;   // 실습은 시작일부터 평일 10일(2주)
 function addBiz(s, n) { const d = pd_(s); let c = 0; while (c < n) { d.setDate(d.getDate() + 1); if (!dateProblem(fmt(d))) c++; } return fmt(d); }
 function initDates() {
-  const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+  const d = new Date();   // 시작일 기본값 = 오늘 (주말·공휴일이면 다음 평일)
   let s = fmt(d); while (dateProblem(s)) { d.setDate(d.getDate() + 1); s = fmt(d); }
-  $('startDate').value = s; $('endDate').value = addBiz(s, 4);
+  $('startDate').value = s; $('endDate').value = addBiz(s, PRACTICUM_DAYS - 1);
 }
 function checkDate(inp) { const m = inp.value ? dateProblem(inp.value) : null; $('dateErr').textContent = m ? '⚠️ ' + m : ''; if (m) inp.value = ''; return !m; }
-function onStartChange() { const s = $('startDate'); if (checkDate(s) && s.value) $('endDate').value = addBiz(s.value, 4); }
+function onStartChange() { const s = $('startDate'); if (checkDate(s) && s.value) $('endDate').value = addBiz(s.value, PRACTICUM_DAYS - 1); }
 function syncW() {
   const a = $('wDist'), b = $('wPref'), d = Math.max(0, Math.min(100, parseInt(a.value) || 0));
   a.value = d; b.value = 100 - d;
