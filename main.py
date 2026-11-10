@@ -2,6 +2,8 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v9.9  병원별 정원을 화면에서 직접 입력(기본값: 2025-1 실제 배정 인원)
+  v9.8  병원별 실제 정원(2025-1 실제 배정 인원) 사용 옵션
   v9.7  지도가 못 찾은 주소를 결과 경고에 표시
   v9.6  주소 자동 정리(오타·괄호·도 누락), 지도 새 주소(VPC) 지원, 로그인 없이 사용, 관리 실습 병원 목록 수정
 
@@ -45,7 +47,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v9.7"
+APP_VERSION = "v9.9"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -165,6 +167,16 @@ BIG_COST = 1e6
 # ──────────────────────────────────────────────────────────────
 # 유틸
 # ──────────────────────────────────────────────────────────────
+# 학과의 실제 배정 인원(2025-1 4학년 관리 실습). 병원마다 받는 인원이 다르므로 '병원별 실제 정원'으로 쓸 수 있다.
+ACTUAL_CAPS = {
+    ("4학년", "1학기", "관리"): {
+        "순천향대학교부천병원": 36, "순천향대학교서울병원": 36, "단원병원": 28, "아주대학교병원": 24,
+        "고려대학교구로병원": 24, "시화병원": 23, "한림대학교동탄성심병원": 23, "서울특별시서남병원": 19,
+        "중앙대학교광명병원": 8,
+    },
+}
+
+
 def norm_h(name) -> str:
     """병원명 비교용 정규화: '(방중)' 표기와 모든 공백 제거."""
     s = str(name or "")
@@ -672,7 +684,7 @@ def make_comparison(ours: Optional[dict], base: Optional[dict], label: str) -> O
 
 
 def random_baseline(eligible: List[dict], pairs: List[Dict[str, dict]], allowed: List[List[str]],
-                    valid: List[str], cap: int) -> Optional[dict]:
+                    valid: List[str], cap) -> Optional[dict]:
     """기준선: 정원은 지키되 학생을 무작위로 병원에 넣는 방식의 평균(고정 시드, 반복 시뮬레이션)."""
     n = len(eligible)
     if not n:
@@ -681,7 +693,7 @@ def random_baseline(eligible: List[dict], pairs: List[Dict[str, dict]], allowed:
     trials = 100 if n <= 500 else 20
     picked: List[dict] = []
     for _ in range(trials):
-        remaining = {h: cap for h in valid}
+        remaining = dict(cap) if isinstance(cap, dict) else {h: cap for h in valid}
         for i in rng.permutation(n):
             opts = [h for h in allowed[i] if remaining[h] > 0]
             if not opts:
@@ -750,6 +762,8 @@ def run_assignment(
     distance_weight: float = 0.7,
     preference_weight: float = 0.3,
     use_transit_api: bool = False,
+    use_actual_caps: bool = False,
+    hospital_caps: Optional[Dict[str, int]] = None,
 ) -> dict:
     valid = hospitals_for(grade, semester, subject)
     if not valid:
@@ -819,9 +833,31 @@ def run_assignment(
     else:
         n = len(eligible)
         cap_eff = max(1, min(cap, n)) if n else cap
-        slot_hosp = [h for h in valid for _ in range(cap_eff)]
+        cap_by_h = {h: cap_eff for h in valid}
+        actual_used = False
+        custom_used = False
+        if hospital_caps:
+            hn = {}
+            for k, v in hospital_caps.items():
+                try:
+                    if int(v) >= 1:
+                        hn[norm_h(k)] = int(v)
+                except (TypeError, ValueError):
+                    pass
+            if hn:
+                cap_by_h = {h: hn.get(norm_h(h), cap_eff) for h in valid}
+                custom_used = True
+        elif use_actual_caps:
+            table = ACTUAL_CAPS.get((grade, semester, subject))
+            if table:
+                tn = {norm_h(k): v for k, v in table.items()}
+                cap_by_h = {h: tn.get(norm_h(h), cap_eff) for h in valid}
+                actual_used = True
+            else:
+                warnings.append("이 교과목은 실제 정원 자료가 없어 '기관별 최대정원' 값을 모든 병원에 똑같이 적용했습니다.")
+        slot_hosp = [h for h in valid for _ in range(cap_by_h[h])]
         slots_total = len(slot_hosp)
-        hospital_cap_map = {h: cap_eff for h in valid}
+        hospital_cap_map = dict(cap_by_h)
         comparison = None
         if n:
             pairs = [{h: build_pair(s, h, dw, pw, real) for h in valid} for s in eligible]
@@ -832,7 +868,7 @@ def run_assignment(
                 for hi, h in enumerate(valid):
                     if h in allowed[i]:
                         base_cost[i, hi] = 100.0 - pairs[i][h]["composite_score"] + s["tb"] * 1e-6
-            slot_idx = np.repeat(np.arange(len(valid)), cap_eff)
+            slot_idx = np.repeat(np.arange(len(valid)), [cap_by_h[h] for h in valid])
             cost = base_cost[:, slot_idx]
             rows, cols = linear_sum_assignment(cost)
             matched = {}
@@ -857,10 +893,12 @@ def run_assignment(
             assigned.sort(key=lambda r: (r["hospital"], r["rank"]))
             comparison = make_comparison(
                 pair_stats([pairs[i][h] for i, h in matched.items()]),
-                random_baseline(eligible, pairs, allowed, valid, cap_eff),
+                random_baseline(eligible, pairs, allowed, valid, cap_by_h),
                 "무작위 배정 — 정원은 지키되 학생을 임의로 배치 (100회 시뮬레이션 평균)")
         method = (f"전체 병원 동시 배정 · SciPy 헝가리안 전역 최적화 "
-                  f"(거리 {round(dw*100)}% · 희망도 {round(pw*100)}%, 병원당 정원 {cap_eff}명, 병원 {len(valid)}곳)")
+                  f"(거리 {round(dw*100)}% · 희망도 {round(pw*100)}%, "
+                  + ("병원별 지정 정원" if custom_used else "병원별 실제 정원(2025-1 배정 인원)" if actual_used else f"병원당 정원 {cap_eff}명")
+                  + f", 병원 {len(valid)}곳)")
         target_label = "전체 병원"
 
     # 요약 통계
@@ -941,9 +979,20 @@ async def get_curriculum():
     return {g: {s: list(subs.keys()) for s, subs in sems.items()} for g, sems in MASTER_HOSPITAL_DB.items()}
 
 
+def _parse_caps(raw: str) -> Optional[Dict[str, int]]:
+    try:
+        d = json.loads(raw) if raw else None
+        return {str(k): int(v) for k, v in d.items()} if isinstance(d, dict) else None
+    except Exception:
+        return None
+
+
 @app.get("/api/v1/hospitals")
 async def get_hospitals(grade: str, semester: str, subject: str):
-    return {"hospitals": hospitals_for(grade, semester, subject)}
+    hs = hospitals_for(grade, semester, subject)
+    table = ACTUAL_CAPS.get((grade, semester, subject)) or {}
+    tn = {norm_h(k): v for k, v in table.items()}
+    return {"hospitals": hs, "actual_caps": {h: tn[norm_h(h)] for h in hs if norm_h(h) in tn}}
 
 
 @app.get("/api/v1/template")
@@ -1099,6 +1148,8 @@ async def assign_hospital_from_file(
     distance_weight: float = Form(0.7),
     preference_weight: float = Form(0.3),
     use_transit_api: bool = Form(False),
+    use_actual_caps: bool = Form(False),
+    hospital_caps: str = Form(""),
     file: UploadFile = File(...),
     x_auth_token: Optional[str] = Header(None),
 ):
@@ -1114,7 +1165,8 @@ async def assign_hospital_from_file(
             df, "single" if mode == "single" else "global", target_hospital, grade, semester, subject,
             start_date, end_date, max_period_capacity, max_hospital_capacity, gender_criteria,
             min_gpa, birth_year_after, exclude_past_hospital, distance_weight, preference_weight,
-            use_transit_api=use_transit_api,
+            use_transit_api=use_transit_api, use_actual_caps=use_actual_caps,
+            hospital_caps=_parse_caps(hospital_caps),
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1396,6 +1448,16 @@ HTML_PAGE = r"""<!DOCTYPE html>
         </div></div>
         <label class="sec" style="display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600;cursor:pointer">
           <input type="checkbox" id="exPast" style="width:auto"> 과거 실습 기관 중복 배정 자동 제외</label>
+        <div class="sec" id="capBox">
+          <span class="lbl">🏥 병원별 정원 (직접 입력)</span>
+          <div class="sub" style="margin:2px 0 8px">병원마다 받을 인원을 정합니다. 비워 두면 위의 '기관별 최대정원' 값을 씁니다.</div>
+          <div id="capTable" class="grid g3"></div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button type="button" class="btn" id="capActualBtn" onclick="fillCaps('actual')" style="display:none">2025-1 실제 인원으로 채우기</button>
+            <button type="button" class="btn" onclick="fillCaps('clear')">모두 비우기</button>
+            <span class="sub" id="capSum"></span>
+          </div>
+        </div>
         <label class="sec" style="display:flex;gap:8px;align-items:flex-start;font-size:14px;font-weight:600;cursor:pointer">
           <input type="checkbox" id="useTransit" style="width:auto;margin-top:4px">
           <span>🚌 지도 기반 통학시간 사용 (거리 반영)<br><span class="sub" id="transitHint" style="font-weight:400"></span></span></label>
@@ -1541,6 +1603,31 @@ function updateSubjects() {
   box.add(new Option('전체 교과목 병원 통합', 'ALL'));
   updateHospitals();
 }
+let ACTUAL_CAPS = {};
+function buildCapTable(hs) {
+  const box = $('capTable'); box.innerHTML = '';
+  hs.forEach(h => {
+    const w = document.createElement('div');
+    w.innerHTML = `<span class="lbl">${esc(h.replace('(방중)', ''))}</span><input type="number" min="1" class="capIn" data-h="${esc(h)}" placeholder="기본값" oninput="capSum()">`;
+    box.appendChild(w);
+  });
+  $('capActualBtn').style.display = Object.keys(ACTUAL_CAPS).length ? '' : 'none';
+  fillCaps(Object.keys(ACTUAL_CAPS).length ? 'actual' : 'clear');
+}
+function fillCaps(kind) {
+  document.querySelectorAll('.capIn').forEach(i => { i.value = kind === 'actual' ? (ACTUAL_CAPS[i.dataset.h] ?? '') : ''; });
+  capSum();
+}
+function capSum() {
+  let t = 0, n = 0;
+  document.querySelectorAll('.capIn').forEach(i => { if (i.value !== '') { t += parseInt(i.value) || 0; n++; } });
+  $('capSum').textContent = n ? `입력된 ${n}곳 합계 ${t}명` : '';
+}
+function capsJson() {
+  const o = {};
+  document.querySelectorAll('.capIn').forEach(i => { if (i.value !== '' && parseInt(i.value) >= 1) o[i.dataset.h] = parseInt(i.value); });
+  return Object.keys(o).length ? JSON.stringify(o) : '';
+}
 async function updateHospitals() {
   const q = new URLSearchParams({grade: $('grade').value, semester: $('semester').value, subject: $('subject').value});
   const box = $('hospital'); box.innerHTML = '';
@@ -1548,6 +1635,8 @@ async function updateHospitals() {
     const d = await (await fetch('/api/v1/hospitals?' + q)).json();
     (d.hospitals || []).forEach(h => box.add(new Option(h.includes('방중') ? h + ' 🏖️' : h, h)));
     $('hospCount').textContent = `이 교과목의 실습 병원 ${(d.hospitals || []).length}곳`;
+    ACTUAL_CAPS = d.actual_caps || {};
+    buildCapTable(d.hospitals || []);
   } catch (e) { $('hospCount').textContent = '병원 목록을 불러오지 못했습니다.'; }
 }
 window.addEventListener('load', async () => {
@@ -1620,6 +1709,7 @@ async function run() {
   f.append('max_period_capacity', $('capPeriod').value || 50); f.append('max_hospital_capacity', $('capHosp').value || 10);
   f.append('gender_criteria', $('gender').value); f.append('exclude_past_hospital', $('exPast').checked);
   f.append('use_transit_api', $('useTransit').checked && !$('useTransit').disabled);
+  f.append('hospital_caps', capsJson());
   f.append('distance_weight', (parseInt($('wDist').value) || 0) / 100); f.append('preference_weight', (parseInt($('wPref').value) || 0) / 100);
   if ($('minGpa').value !== '') f.append('min_gpa', $('minGpa').value);
   if ($('birthYear').value !== '') f.append('birth_year_after', $('birthYear').value);
