@@ -69,9 +69,8 @@ def _load_env_files() -> None:
 
 _load_env_files()
 _ENV_PASSWORD = os.environ.get("APP_PASSWORD")
-if not _ENV_PASSWORD:
-    print("[경고] APP_PASSWORD 환경변수가 없어 데모용 기본 암호를 사용합니다. 배포 전 반드시 설정하세요.")
-APP_PASSWORD = _ENV_PASSWORD or "ansan king"
+AUTH_REQUIRED = bool(_ENV_PASSWORD)   # APP_PASSWORD 를 설정하지 않으면 로그인 없이 바로 사용한다.
+APP_PASSWORD = _ENV_PASSWORD or "no-password"
 TOKEN_TTL_SEC = 8 * 60 * 60
 _TOKEN_SECRET = hashlib.sha256(("tok|" + APP_PASSWORD).encode("utf-8")).digest()
 
@@ -262,7 +261,9 @@ def satisfaction_index(mfi: float) -> int:
 BASE_DIR = Path(__file__).resolve().parent
 NAVER_KEY_ID = os.environ.get("NAVER_MAPS_KEY_ID", "")
 NAVER_KEY_SECRET = os.environ.get("NAVER_MAPS_KEY", "")
-NAVER_GEOCODE_URL = os.environ.get("NAVER_GEOCODE_URL", "https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode")
+# 새 지도 서비스(VPC)는 maps.apigw.ntruss.com, 예전(Classic) 키는 naveropenapi.apigw.ntruss.com 을 쓴다.
+NAVER_GEOCODE_URL = os.environ.get("NAVER_GEOCODE_URL", "https://maps.apigw.ntruss.com/map-geocode/v2/geocode")
+NAVER_GEOCODE_URL_OLD = "https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode"
 TMAP_APP_KEY = os.environ.get("TMAP_APP_KEY", "")
 TMAP_TRANSIT_URL = "https://apis.openapi.sk.com/transit/routes"
 TRANSIT_AVAILABLE = bool(NAVER_KEY_ID and NAVER_KEY_SECRET)          # 네이버 키만 있어도 사용 가능
@@ -335,9 +336,18 @@ def _http_json(url: str, headers: dict, body: Optional[bytes] = None, timeout: i
 
 
 def _geocode_raw(query: str) -> List[dict]:
-    url = NAVER_GEOCODE_URL + "?" + urllib.parse.urlencode({"query": query})
-    data = _http_json(url, {"x-ncp-apigw-api-key-id": NAVER_KEY_ID,
-                            "x-ncp-apigw-api-key": NAVER_KEY_SECRET, "Accept": "application/json"})
+    global NAVER_GEOCODE_URL
+    q = "?" + urllib.parse.urlencode({"query": query})
+    hdr = {"x-ncp-apigw-api-key-id": NAVER_KEY_ID, "x-ncp-apigw-api-key": NAVER_KEY_SECRET, "Accept": "application/json"}
+    try:
+        data = _http_json(NAVER_GEOCODE_URL + q, hdr)
+    except urllib.error.HTTPError as e:
+        # 새 주소에서 인증이 거절되면 옛 주소(Classic 키)로 한 번 더 시도하고, 되는 쪽을 기억한다.
+        if e.code in (401, 403) and NAVER_GEOCODE_URL != NAVER_GEOCODE_URL_OLD:
+            data = _http_json(NAVER_GEOCODE_URL_OLD + q, hdr)
+            NAVER_GEOCODE_URL = NAVER_GEOCODE_URL_OLD
+        else:
+            raise
     return data.get("addresses") or []
 
 
@@ -873,7 +883,7 @@ class PasswordVerifyRequest(BaseModel):
 
 
 def _require_token(token: Optional[str]):
-    if not _token_ok(token):
+    if AUTH_REQUIRED and not _token_ok(token):
         raise HTTPException(status_code=401, detail="인증이 만료되었습니다. 다시 접속해 주세요.")
 
 
@@ -890,7 +900,7 @@ async def get_config():
     if TRANSIT_AVAILABLE:
         addr = load_hospital_addresses()
         missing = sum(1 for h in all_hospital_names() if norm_h(h) not in addr)
-    return {"transit_available": TRANSIT_AVAILABLE, "transit_mode": TRANSIT_MODE, "hospitals_missing_address": missing}
+    return {"transit_available": TRANSIT_AVAILABLE, "transit_mode": TRANSIT_MODE, "hospitals_missing_address": missing, "auth_required": AUTH_REQUIRED}
 
 
 @app.get("/api/v1/curriculum")
@@ -1446,7 +1456,7 @@ function toast(msg, err) {
 }
 
 /* ===== 인증 ===== */
-if (TOKEN) $('auth').style.display = 'none';
+$('auth').style.display = 'none';   // 로그인 창은 서버가 암호를 요구할 때만 init()에서 띄운다.
 async function verifyPassword() {
   $('authErr').textContent = '';
   try {
@@ -1455,7 +1465,7 @@ async function verifyPassword() {
     else $('authErr').textContent = '암호가 올바르지 않습니다.';
   } catch (e) { $('authErr').textContent = '서버에 연결할 수 없습니다.'; }
 }
-function authExpired() { store('token', null); TOKEN = ''; $('auth').style.display = 'flex'; }
+function authExpired() { store('token', null); TOKEN = ''; if (CONFIG.auth_required !== false) $('auth').style.display = 'flex'; }
 
 /* ===== 날짜 ===== */
 const HOLIDAYS = new Set([
@@ -1511,6 +1521,7 @@ window.addEventListener('load', async () => {
   initDates();
   try { CURRICULUM = await (await fetch('/api/v1/curriculum')).json(); } catch (e) {}
   try { CONFIG = await (await fetch('/api/v1/config')).json(); } catch (e) { CONFIG = {}; }
+  if (CONFIG.auth_required && !TOKEN) $('auth').style.display = 'flex';
   const ut = $('useTransit');
   if (CONFIG.transit_available) {
     const m = CONFIG.hospitals_missing_address;
