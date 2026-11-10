@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v9.7  지도가 못 찾은 주소를 결과 경고에 표시
   v9.6  주소 자동 정리(오타·괄호·도 누락), 지도 새 주소(VPC) 지원, 로그인 없이 사용, 관리 실습 병원 목록 수정
 
 실행:
@@ -44,7 +45,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v9.6"
+APP_VERSION = "v9.7"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -506,6 +507,10 @@ def prefetch_transit(students: List[dict], hospitals: List[str]) -> List[str]:
     if failed:
         why = f" (오류: {', '.join(sorted(set(errs))[:3])} — 키·Maps 선택·병원 주소를 확인하세요)" if errs else ""
         notes.append(f"지도 조회에 실패했거나 지연된 {failed}건(총 {len(todo)}건 중)은 규칙 기반 추정치로 대체했습니다.{why}")
+        with _cache_lock:
+            bad = sorted({q for d, a in todo for q in (d, a) if q in c["geo"] and c["geo"][q] is None})
+        if bad:
+            notes.append(f"지도가 위치를 찾지 못한 주소 {len(bad)}개: " + " / ".join(bad[:8]) + (" 외" if len(bad) > 8 else ""))
     return notes
 
 
