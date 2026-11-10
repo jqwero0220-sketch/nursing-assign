@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v10.3 실습일수 표시(8~10일 규칙): 8일 미만이면 경고, 오늘이 목·금이면 시작일을 다음 월요일로
   v10.2 종료일 기본값: 시작일이 속한 주의 다음 주 금요일(휴일이면 그 전 평일)
   v10.1 실습 기간 기본값: 시작일=오늘(휴일이면 다음 평일)
   v10.0 화면 정리(상세 설정 재구성, 지도 거리 항상 사용, 로고 아이콘·샘플 버튼 정리, 통학시간 "약" 표기)
@@ -50,7 +51,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v10.2"
+APP_VERSION = "v10.3"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -1455,8 +1456,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <h4>실습 기간</h4>
         <div class="grid g2">
           <div><span class="lbl">실습 시작일</span><input type="date" id="startDate" onchange="onStartChange()"></div>
-          <div><span class="lbl">실습 종료일 (2주 안 · 금요일 자동)</span><input type="date" id="endDate" onchange="checkDate(this)"></div>
+          <div><span class="lbl">실습 종료일 (2주 안 · 금요일 자동)</span><input type="date" id="endDate" onchange="checkDate(this);updateDayCount()"></div>
         </div><div class="hint" id="dateErr" style="color:var(--bad);font-weight:700"></div>
+        <div class="hint" id="dayCount" style="font-weight:700"></div>
 
         <h4>병원별 정원</h4>
         <div class="hint" style="margin:0 0 10px">병원마다 받을 인원을 정합니다. 칸을 비우면 아래 '기본 정원'을 씁니다.</div>
@@ -1600,6 +1602,19 @@ function dateProblem(s) {
   if (HOLIDAYS.has(s) || FIXED.has(s.slice(5))) return '공휴일·명절 연휴는 실습일로 지정할 수 없습니다.';
   return null;
 }
+function bizDays(a, b) {   // 시작일~종료일 사이 평일(공휴일 제외) 일수, 양끝 포함
+  const d = pd_(a), end = pd_(b); let n = 0;
+  while (d <= end) { if (!dateProblem(fmt(d))) n++; d.setDate(d.getDate() + 1); }
+  return n;
+}
+function updateDayCount() {
+  const a = $('startDate').value, b = $('endDate').value, el = $('dayCount');
+  if (!a || !b) { el.textContent = ''; return; }
+  const n = bizDays(a, b);
+  if (n < 8) { el.style.color = 'var(--bad)'; el.textContent = `⚠️ 실습일수 ${n}일 — 8일 미만이면 실습 이수가 되지 않습니다.`; }
+  else if (n > 10) { el.style.color = 'var(--bad)'; el.textContent = `⚠️ 실습일수 ${n}일 — 최대 10일을 넘습니다.`; }
+  else { el.style.color = 'var(--ok, #0f766e)'; el.textContent = `✓ 실습일수 ${n}일 (8~10일 충족)`; }
+}
 function defaultEnd(s) {   // 실습은 2주 안에 끝나고 보통 금요일: 시작일이 속한 주의 '다음 주 금요일'
   const d = pd_(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + 11);
   let e = fmt(d); while (dateProblem(e)) { d.setDate(d.getDate() - 1); e = fmt(d); }   // 그날이 휴일이면 그 전 평일
@@ -1609,10 +1624,13 @@ function addBiz(s, n) { const d = pd_(s); let c = 0; while (c < n) { d.setDate(d
 function initDates() {
   const d = new Date();   // 시작일 기본값 = 오늘 (주말·공휴일이면 다음 평일)
   let s = fmt(d); while (dateProblem(s)) { d.setDate(d.getDate() + 1); s = fmt(d); }
-  $('startDate').value = s; $('endDate').value = defaultEnd(s);
+  if (bizDays(s, defaultEnd(s)) < 8) {   // 오늘 시작하면 8일을 못 채우는 요일(목·금 등)이면 다음 월요일부터
+    d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); s = fmt(d); while (dateProblem(s)) { d.setDate(d.getDate() + 1); s = fmt(d); }
+  }
+  $('startDate').value = s; $('endDate').value = defaultEnd(s); updateDayCount();
 }
 function checkDate(inp) { const m = inp.value ? dateProblem(inp.value) : null; $('dateErr').textContent = m ? '⚠️ ' + m : ''; if (m) inp.value = ''; return !m; }
-function onStartChange() { const s = $('startDate'); if (checkDate(s) && s.value) $('endDate').value = defaultEnd(s.value); }
+function onStartChange() { const s = $('startDate'); if (checkDate(s) && s.value) $('endDate').value = defaultEnd(s.value); updateDayCount(); }
 function syncW() {
   const a = $('wDist'), b = $('wPref'), d = Math.max(0, Math.min(100, parseInt(a.value) || 0));
   a.value = d; b.value = 100 - d;
