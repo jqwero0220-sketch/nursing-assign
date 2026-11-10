@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v10.0 화면 정리(상세 설정 재구성, 지도 거리 항상 사용, 로고 아이콘·샘플 버튼 정리, 통학시간 "약" 표기)
   v9.9  병원별 정원을 화면에서 직접 입력(기본값: 2025-1 실제 배정 인원)
   v9.8  병원별 실제 정원(2025-1 실제 배정 인원) 사용 옵션
   v9.7  지도가 못 찾은 주소를 결과 경고에 표시
@@ -47,7 +48,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v9.9"
+APP_VERSION = "v10.0"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -1247,6 +1248,18 @@ HTML_PAGE = r"""<!DOCTYPE html>
   details.adv[open] > summary::after { content:'－'; }
   details.adv .adv-body { padding:4px 16px 18px; border-top:1px solid var(--line); }
   .sec { margin-top:16px; }
+  .adv-body h4 { margin:22px 0 8px; font-size:14px; color:var(--navy); }
+  .adv-body h4:first-child { margin-top:14px; }
+  details.more { margin-top:22px; border:1px dashed var(--line); border-radius:10px; }
+  details.more > summary { cursor:pointer; padding:11px 14px; font-weight:600; font-size:14px; color:var(--muted); list-style:none; }
+  details.more > summary::after { content:'＋'; float:right; }
+  details.more[open] > summary::after { content:'－'; }
+  details.more .more-body { padding:2px 14px 16px; }
+  .wbar { display:flex; justify-content:space-between; font-weight:700; font-size:14px; margin-bottom:6px; }
+  input[type=range] { width:100%; accent-color:var(--navy); padding:0; border:0; background:transparent; }
+  .caps { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:8px 18px; }
+  .caprow { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:14px; }
+  .caprow input { width:84px; padding:8px 10px; text-align:right; }
 
   /* 업로드 */
   .drop { border:2px dashed #94a3b8; border-radius:16px; background:#f8fafc; padding:34px 20px; text-align:center; transition:all .15s; }
@@ -1388,7 +1401,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
 </div>
 
 <header class="top"><div class="wrap top-in">
-  <div class="brand">🏥 로켓단<span>간호학과 실습지 최적 배정 시스템</span></div>
+  <div class="brand">로켓단<span>간호학과 실습지 최적 배정 시스템</span></div>
   <span class="ver">__APP_VERSION__</span>
 </div></header>
 
@@ -1424,43 +1437,51 @@ HTML_PAGE = r"""<!DOCTYPE html>
     <div class="field sec" id="hospWrap" style="display:none"><label for="hospital">배정 대상 병원 <span class="sub">(방중 = 방학중 운영)</span></label>
       <select id="hospital"></select></div>
     <div class="hint" id="hospCount"></div>
+    <input type="checkbox" id="useTransit" checked hidden>
+
+    <div class="hint" id="transitHint"></div>
 
     <details class="adv">
-      <summary>상세 설정 — 가중치 · 기간 · 정원 · 자격 조건</summary>
+      <summary>상세 설정 — 배정 기준 · 실습 기간 · 병원별 정원 · 추가 조건</summary>
       <div class="adv-body">
-        <div class="sec"><span class="lbl">배정 기준 가중치 (합계 100%)</span>
-          <div class="grid g2">
-            <div><span class="sub">통학 거리 (%)</span><input type="number" id="wDist" value="70" min="0" max="100" oninput="syncW('dist')"></div>
-            <div><span class="sub">학생 희망도 (%)</span><input type="number" id="wPref" value="30" min="0" max="100" oninput="syncW('pref')"></div>
-          </div></div>
-        <div class="sec"><div class="grid g2">
+        <h4>배정 기준</h4>
+        <div class="wbar"><span id="wPrefLbl">희망 병원 30%</span><span id="wDistLbl">통학 거리 70%</span></div>
+        <input type="range" id="wDist" min="0" max="100" step="5" value="70" oninput="syncW()" aria-label="통학 거리와 희망 병원의 비중">
+        <input type="hidden" id="wPref" value="30">
+        <div class="hint">왼쪽으로 움직이면 희망 병원을, 오른쪽으로 움직이면 통학 거리를 더 중요하게 봅니다.</div>
+
+        <h4>실습 기간</h4>
+        <div class="grid g2">
           <div><span class="lbl">실습 시작일</span><input type="date" id="startDate" onchange="onStartChange()"></div>
           <div><span class="lbl">실습 종료일 (평일 5일 자동)</span><input type="date" id="endDate" onchange="checkDate(this)"></div>
-        </div><div class="hint" id="dateErr" style="color:var(--bad);font-weight:700"></div></div>
-        <div class="sec"><div class="grid g2">
-          <div><span class="lbl">기간별 최대정원</span><input type="number" id="capPeriod" value="50" min="1"></div>
-          <div><span class="lbl">기관별 최대정원</span><input type="number" id="capHosp" value="10" min="1"></div>
-        </div><div class="hint">병원 한 곳의 실제 정원 = 두 값 중 작은 값</div></div>
-        <div class="sec"><div class="grid g3">
-          <div><span class="lbl">성별 조건</span><select id="gender"><option>무관</option><option>남성만</option><option>여성만</option></select></div>
-          <div><span class="lbl">최소 GPA</span><input type="number" step="0.1" id="minGpa" placeholder="예: 3.5"></div>
-          <div><span class="lbl">출생연도 이후</span><input type="number" id="birthYear" placeholder="예: 2003"></div>
-        </div></div>
-        <label class="sec" style="display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="exPast" style="width:auto"> 과거 실습 기관 중복 배정 자동 제외</label>
-        <div class="sec" id="capBox">
-          <span class="lbl">🏥 병원별 정원 (직접 입력)</span>
-          <div class="sub" style="margin:2px 0 8px">병원마다 받을 인원을 정합니다. 비워 두면 위의 '기관별 최대정원' 값을 씁니다.</div>
-          <div id="capTable" class="grid g3"></div>
-          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <button type="button" class="btn" id="capActualBtn" onclick="fillCaps('actual')" style="display:none">2025-1 실제 인원으로 채우기</button>
-            <button type="button" class="btn" onclick="fillCaps('clear')">모두 비우기</button>
-            <span class="sub" id="capSum"></span>
-          </div>
+        </div><div class="hint" id="dateErr" style="color:var(--bad);font-weight:700"></div>
+
+        <h4>병원별 정원</h4>
+        <div class="hint" style="margin:0 0 10px">병원마다 받을 인원을 정합니다. 칸을 비우면 아래 '기본 정원'을 씁니다.</div>
+        <div id="capTable" class="caps"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="btn btn-ghost btn-sm" id="capActualBtn" onclick="fillCaps('actual')" style="display:none">2025-1 실제 인원으로 채우기</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="fillCaps('clear')">모두 비우기</button>
+          <span class="sub" id="capSum"></span>
         </div>
-        <label class="sec" style="display:flex;gap:8px;align-items:flex-start;font-size:14px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="useTransit" style="width:auto;margin-top:4px">
-          <span>🚌 지도 기반 통학시간 사용 (거리 반영)<br><span class="sub" id="transitHint" style="font-weight:400"></span></span></label>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:12px;font-size:14px">
+          <span class="lbl" style="margin:0">기본 정원</span><input type="number" id="capHosp" value="40" min="1" style="width:84px;text-align:right">
+          <span class="sub">명 (칸을 비운 병원에 적용)</span>
+        </div>
+        <input type="hidden" id="capPeriod" value="50">
+
+        <details class="more">
+          <summary>추가 조건 (성별 · GPA · 출생연도 · 과거 실습 제외)</summary>
+          <div class="more-body">
+            <div class="grid g3">
+              <div><span class="lbl">성별 조건</span><select id="gender"><option>무관</option><option>남성만</option><option>여성만</option></select></div>
+              <div><span class="lbl">최소 GPA</span><input type="number" step="0.1" id="minGpa" placeholder="예: 3.5"></div>
+              <div><span class="lbl">출생연도 이후</span><input type="number" id="birthYear" placeholder="예: 2003"></div>
+            </div>
+            <label style="display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600;cursor:pointer;margin-top:14px">
+              <input type="checkbox" id="exPast" style="width:auto"> 과거 실습 기관 중복 배정 자동 제외</label>
+          </div>
+        </details>
       </div>
     </details>
 
@@ -1475,14 +1496,14 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
     <div class="drop" id="drop">
       <div class="big">엑셀(.xlsx) 또는 CSV 파일을 여기에 끌어다 놓으세요</div>
-      <div class="sub" style="margin-bottom:14px">필수: 학번 · 이름 · 성별 · GPA · 출생연도 &nbsp;/&nbsp; 선택: 주소 · 과거실습지 · 1~3지망병원</div>
+      <div class="sub" style="margin-bottom:14px">필수 열: 학번 · 이름 · 성별 · GPA · 출생연도 (나머지 열은 양식 샘플 참고)</div>
       <label class="btn btn-ghost btn-sm" style="cursor:pointer">파일 선택<input type="file" id="file" accept=".csv,.xlsx" style="display:none"></label>
       <div class="file-ok" id="fileOk"></div>
     </div>
     <div class="or">또는</div>
     <div class="tools">
-      <button class="btn btn-ghost" onclick="loadSample()">✨ 샘플 데이터로 체험 (가상 학생 60명)</button>
-      <a class="btn btn-ghost" href="/api/v1/template">📄 양식 샘플 다운로드</a>
+      <button class="btn btn-ghost btn-sm" onclick="loadSample()">✨ 샘플로 바로 체험</button>
+      <a class="btn btn-ghost btn-sm" href="/api/v1/template">📄 양식 샘플 다운로드</a>
     </div>
 
     <div class="actions">
@@ -1517,11 +1538,11 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <table class="tbl"><thead><tr>
           <th>순위</th><th class="l">병원</th><th>학번</th><th>이름</th><th>GPA</th>
           <th title="학생이 적은 1~3지망과 배정 병원의 일치 여부">지망 반영</th>
-          <th title="TMAP 대중교통 소요시간. ≈ 는 지도 좌표 직선거리 추정, * 는 주소 기반 규칙 추정">통학시간</th>
+          <th title="TMAP 대중교통 소요시간. '약'은 지도 좌표 기반 추정, '추정'은 주소 기반 규칙 추정">통학시간</th>
           <th title="통학 점수 × 거리 가중치 + 지망 점수 × 희망도 가중치">종합점수</th>
           <th title="통학 부담(소요시간·환승·도보) 기반 규칙형 지수. 학습 모델이 아닙니다">만족도 지수</th>
         </tr></thead><tbody id="bodyA"></tbody></table>
-        <div class="sub" style="padding:10px 16px">행을 누르면 점수가 어떻게 계산됐는지 볼 수 있습니다. 통학시간의 ≈ 는 지도 좌표 직선거리 기반, * 는 규칙 기반 추정치입니다.</div>
+        <div class="sub" style="padding:10px 16px">행을 누르면 점수가 어떻게 계산됐는지 볼 수 있습니다. 통학시간 앞의 '약'은 지도 좌표 직선거리 기반 추정, '추정' 표시는 규칙 기반 추정치입니다.</div>
       </div>
       <div id="pH" class="pane tbl-wrap">
         <table class="tbl"><thead><tr><th class="l">병원</th><th>배정 / 정원</th><th>평균 통학</th><th>지망 일치 인원</th></tr></thead><tbody id="bodyH"></tbody></table>
@@ -1585,9 +1606,10 @@ function initDates() {
 }
 function checkDate(inp) { const m = inp.value ? dateProblem(inp.value) : null; $('dateErr').textContent = m ? '⚠️ ' + m : ''; if (m) inp.value = ''; return !m; }
 function onStartChange() { const s = $('startDate'); if (checkDate(s) && s.value) $('endDate').value = addBiz(s.value, 4); }
-function syncW(ch) {
-  const a = $('wDist'), b = $('wPref'), cl = v => Math.max(0, Math.min(100, parseInt(v) || 0));
-  if (ch === 'dist') { a.value = cl(a.value); b.value = 100 - a.value; } else { b.value = cl(b.value); a.value = 100 - b.value; }
+function syncW() {
+  const a = $('wDist'), b = $('wPref'), d = Math.max(0, Math.min(100, parseInt(a.value) || 0));
+  a.value = d; b.value = 100 - d;
+  $('wDistLbl').textContent = `통학 거리 ${d}%`; $('wPrefLbl').textContent = `희망 병원 ${100 - d}%`;
 }
 
 /* ===== 교과목·병원 ===== */
@@ -1607,8 +1629,8 @@ let ACTUAL_CAPS = {};
 function buildCapTable(hs) {
   const box = $('capTable'); box.innerHTML = '';
   hs.forEach(h => {
-    const w = document.createElement('div');
-    w.innerHTML = `<span class="lbl">${esc(h.replace('(방중)', ''))}</span><input type="number" min="1" class="capIn" data-h="${esc(h)}" placeholder="기본값" oninput="capSum()">`;
+    const w = document.createElement('div'); w.className = 'caprow';
+    w.innerHTML = `<span>${esc(h.replace('(방중)', ''))}</span><input type="number" min="1" class="capIn" data-h="${esc(h)}" placeholder="기본" oninput="capSum()">`;
     box.appendChild(w);
   });
   $('capActualBtn').style.display = Object.keys(ACTUAL_CAPS).length ? '' : 'none';
@@ -1644,15 +1666,14 @@ window.addEventListener('load', async () => {
   try { CURRICULUM = await (await fetch('/api/v1/curriculum')).json(); } catch (e) {}
   try { CONFIG = await (await fetch('/api/v1/config')).json(); } catch (e) { CONFIG = {}; }
   if (CONFIG.auth_required && !TOKEN) $('auth').style.display = 'flex';
-  const ut = $('useTransit');
   if (CONFIG.transit_available) {
     const m = CONFIG.hospitals_missing_address;
-    ut.checked = true;
-    $('transitHint').textContent = (CONFIG.transit_mode === 'tmap' ? 'TMAP 대중교통 소요시간을 사용합니다. ' : '지도 좌표의 직선거리로 통학시간을 추정합니다. ')
-      + (m ? `병원 주소 미등록 ${m}곳은 규칙 기반 추정치로 대체됩니다. ` : '') + '첫 실행은 시간이 걸릴 수 있고 이후엔 저장된 값을 사용합니다. (동 단위 주소만 전송)';
+    $('transitHint').textContent = '🚌 통학시간: ' + (CONFIG.transit_mode === 'tmap' ? 'TMAP 대중교통 실제 소요시간을 사용합니다. ' : '지도 좌표 기반 거리로 추정합니다. ')
+      + (m ? `병원 주소가 없는 ${m}곳은 규칙 기반 추정치로 대체됩니다. ` : '') + '첫 실행은 시간이 걸릴 수 있고, 이후에는 저장된 값을 사용합니다.';
   } else {
-    ut.disabled = true; $('transitHint').textContent = 'API 키가 설정되지 않아 규칙 기반 추정치를 사용합니다.';
+    $('transitHint').textContent = '🚌 지도 키가 설정되지 않아 통학시간은 규칙 기반 추정치로 계산됩니다.';
   }
+  syncW();
   updateSubjects(); onModeChange();
 });
 
@@ -1708,7 +1729,7 @@ async function run() {
   f.append('start_date', $('startDate').value); f.append('end_date', $('endDate').value);
   f.append('max_period_capacity', $('capPeriod').value || 50); f.append('max_hospital_capacity', $('capHosp').value || 10);
   f.append('gender_criteria', $('gender').value); f.append('exclude_past_hospital', $('exPast').checked);
-  f.append('use_transit_api', $('useTransit').checked && !$('useTransit').disabled);
+  f.append('use_transit_api', true);
   f.append('hospital_caps', capsJson());
   f.append('distance_weight', (parseInt($('wDist').value) || 0) / 100); f.append('preference_weight', (parseInt($('wPref').value) || 0) / 100);
   if ($('minGpa').value !== '') f.append('min_gpa', $('minGpa').value);
@@ -1795,7 +1816,7 @@ function renderAssigned() {
   $('bodyA').innerHTML = rows.map(([r, i]) => `<tr class="click" onclick="openDetail(${i})">
     <td><span class="rk">${esc(r.rank)}위</span></td><td class="l">${esc(r.hospital)}</td><td>${esc(r.student_id)}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.gpa)}</td>
     <td><span class="pill ${r.preference_status.includes('일치') ? 'hit' : 'miss'}">${esc(r.preference_status)}</span></td>
-    <td><b>${esc(r.travel_time_minutes)}분</b>${r.transit_source === 'TMAP' ? '' : `<span class="sub">${r.transit_source === '직선거리' ? '≈' : '*'}</span>`}</td><td><span class="score">${esc(r.composite_score)}</span></td><td>${esc(r.satisfaction_index)}</td></tr>`).join('')
+    <td><b>${r.transit_source === 'TMAP' ? '' : '약 '}${esc(r.travel_time_minutes)}분</b>${r.transit_source === '추정' ? '<span class="sub"> 추정</span>' : ''}</td><td><span class="score">${esc(r.composite_score)}</span></td><td>${esc(r.satisfaction_index)}</td></tr>`).join('')
     || `<tr><td colspan="9" class="empty">${q ? '검색 결과가 없습니다.' : '배정된 학생이 없습니다.'}</td></tr>`;
 }
 function render(d) {
