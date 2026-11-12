@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v11.5 소개 페이지: 화면 예시, 거리·희망 비중 체험, 수작업과 비교, 숫자 올라가는 효과
   v11.4 소식(업데이트) 맨 위에 현재 버전 표시
   v11.3 소개 페이지 첫 문장을 짧게(한 줄로 이어지도록)
   v11.2 소개 페이지 줄바꿈 정리(단어 중간에서 끊기지 않고 한 줄에 가깝게)
@@ -62,7 +63,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response, Streami
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v11.4"
+APP_VERSION = "v11.5"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -2123,11 +2124,53 @@ LANDING_PAGE = """<!DOCTYPE html>
   footer { padding:34px 0 50px; color:var(--muted); font-size:13px; border-top:1px solid var(--line); }
   footer .links { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:8px; }
   footer a { color:var(--muted); }
+  .mock { max-width:880px; margin:48px auto 0; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 24px 60px rgba(15,23,42,.14); overflow:hidden; text-align:left; }
+  .mock-bar { display:flex; align-items:center; gap:7px; padding:11px 14px; background:#f1f5f9; border-bottom:1px solid var(--line); font-size:12px; color:var(--muted); }
+  .mock-bar i { width:10px; height:10px; border-radius:50%; background:#cbd5e1; display:block; }
+  .mock-bar span { margin-left:10px; }
+  .mock-body { padding:20px; }
+  .mk-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+  .mk-kpi { border:1px solid var(--line); border-left:4px solid var(--teal); border-radius:10px; padding:10px 14px; }
+  .mk-kpi small { display:block; color:var(--muted); font-size:12px; }
+  .mk-kpi b { font-size:22px; letter-spacing:-.5px; }
+  .mk-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+  .mk-tbl th { background:#f8fafc; color:#475569; font-size:12px; padding:9px 8px; text-align:center; border-bottom:1px solid var(--line); white-space:nowrap; }
+  .mk-tbl td { padding:10px 8px; text-align:center; border-bottom:1px solid #f1f5f9; white-space:nowrap; }
+  .mk-tbl td.l, .mk-tbl th.l { text-align:left; }
+  .mk-tbl .rk { background:#fef3c7; color:#92400e; font-weight:700; font-size:12px; padding:2px 8px; border-radius:99px; }
+  .mk-tbl .hit { background:#ccfbf1; color:#115e59; font-weight:700; font-size:12px; padding:2px 8px; border-radius:99px; }
+  .mk-tbl .miss { background:#f1f5f9; color:#475569; font-weight:700; font-size:12px; padding:2px 8px; border-radius:99px; }
+  .mk-tbl .sc { color:var(--blue); font-weight:800; }
+  .mock-cap { font-size:12px; color:var(--muted); padding:0 20px 14px; }
+  .cmp { width:100%; border-collapse:separate; border-spacing:0; background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .cmp th, .cmp td { padding:16px 20px; text-align:left; font-size:15px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .cmp tr:last-child td { border-bottom:none; }
+  .cmp thead th { background:#f8fafc; font-size:14px; }
+  .cmp thead th.us { background:var(--teal-d); color:#fff; }
+  .cmp td:first-child { font-weight:700; width:22%; }
+  .cmp td.old { color:var(--muted); }
+  .cmp td.new { background:#f0fdfa; color:var(--navy); }
+  .demo { display:grid; grid-template-columns:1fr 1.2fr; gap:28px; background:#fff; border:1px solid var(--line); border-radius:18px; padding:30px; align-items:start; }
+  .demo h3 { font-size:20px; margin:0 0 8px; }
+  .demo p { color:var(--muted); margin:0 0 18px; font-size:15px; }
+  .demo .wl { display:flex; justify-content:space-between; font-size:14px; font-weight:700; margin-bottom:8px; }
+  .demo input[type=range] { width:100%; accent-color:var(--teal-d); }
+  .demo .hint { font-size:12px; color:var(--muted); margin-top:10px; }
+  .dr { display:grid; grid-template-columns:1fr auto; gap:4px 10px; padding:11px 12px; border-radius:10px; border:1px solid var(--line); margin-bottom:8px; background:#fff; transition:background .2s, border-color .2s; }
+  .dr.top { background:#f0fdfa; border-color:var(--teal); }
+  .dr .nm { font-weight:700; font-size:15px; }
+  .dr .nm em { font-style:normal; font-size:11px; background:var(--teal-d); color:#fff; padding:1px 7px; border-radius:99px; margin-left:6px; vertical-align:middle; }
+  .dr .sub { font-size:12px; color:var(--muted); }
+  .dr .sc { font-weight:800; font-size:17px; color:var(--blue); text-align:right; }
+  .dr .tr { grid-column:1 / 3; height:7px; border-radius:4px; background:#e2e8f0; overflow:hidden; }
+  .dr .tr i { display:block; height:100%; background:var(--teal); transition:width .25s; }
   @media (max-width:860px) {
+    .demo { grid-template-columns:1fr; }
     .g4, .stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .svc { grid-template-columns:1fr; }
   }
   @media (max-width:640px) {
+    .mk-kpis { grid-template-columns:1fr; } .mock-body { padding:12px; overflow-x:auto; } .mk-tbl { min-width:560px; } .cmp th, .cmp td { padding:12px; font-size:14px; }
     .hero { padding:56px 0 48px; } .hero h1 { font-size:31px; } .hero p { font-size:16px; }
     .g3, .g2, .g4 { grid-template-columns:1fr; } .nav a.hide { display:none; } section { padding:48px 0; }
     .nav { gap:14px; } h2 { font-size:25px; } .stat .big { font-size:30px; }
@@ -2147,6 +2190,23 @@ LANDING_PAGE = """<!DOCTYPE html>
   <h1>실습 배정의 모든 과정,<br>거리와 희망으로 스마트하게</h1>
   <p>통학 거리와 희망 병원을 함께 계산해 배정안을 추천하고, 근거까지 보여 줍니다.<br>최종 결정은 교수자가 합니다.</p>
   <div class="cta"><a class="btn" href="/app">배정 시스템 열기</a><a class="btn ghost" href="#service">서비스 알아보기</a></div>
+  <div class="mock">
+    <div class="mock-bar"><i></i><i></i><i></i><span>로켓단 · 결과 확인</span></div>
+    <div class="mock-body">
+      <div class="mk-kpis">
+        <div class="mk-kpi"><small>시험한 학생 수</small><b>221명</b></div>
+        <div class="mk-kpi"><small>평균 통학시간</small><b>35분</b></div>
+        <div class="mk-kpi"><small>지망 충족률</small><b>76%</b></div>
+      </div>
+      <table class="mk-tbl"><thead><tr><th>순위</th><th class="l">병원</th><th>학번</th><th>이름</th><th>지망 반영</th><th>통학시간</th><th>종합점수</th></tr></thead><tbody>
+        <tr><td><span class="rk">1위</span></td><td class="l">고려대학교구로병원</td><td>202○○○07</td><td><b>김○수</b></td><td><span class="hit">1지망 일치</span></td><td><b>약 24분</b></td><td class="sc">91.6</td></tr>
+        <tr><td><span class="rk">1위</span></td><td class="l">순천향대학교부천병원</td><td>202○○○15</td><td><b>이○은</b></td><td><span class="hit">1지망 일치</span></td><td><b>약 18분</b></td><td class="sc">97.2</td></tr>
+        <tr><td><span class="rk">2위</span></td><td class="l">단원병원</td><td>202○○○31</td><td><b>박○준</b></td><td><span class="hit">2지망 일치</span></td><td><b>약 29분</b></td><td class="sc">77.9</td></tr>
+        <tr><td><span class="rk">3위</span></td><td class="l">아주대학교병원</td><td>202○○○42</td><td><b>최○린</b></td><td><span class="miss">비지망(기본)</span></td><td><b>약 21분</b></td><td class="sc">67.4</td></tr>
+      </tbody></table>
+    </div>
+    <div class="mock-cap">화면 예시입니다. 가상 학생 데이터이고, 이름과 학번은 일부를 가렸습니다.</div>
+  </div>
 </div></div>
 
 <section id="why"><div class="wrap">
@@ -2159,13 +2219,38 @@ LANDING_PAGE = """<!DOCTYPE html>
   </div>
 </div></section>
 
+<section id="compare" class="alt"><div class="wrap">
+  <div class="sec-h"><div class="tag">비교</div><h2>엑셀 수작업과 무엇이 다른가</h2><p>최종 결정은 그대로 교수자가 합니다. 계산과 근거 정리를 시스템이 돕습니다.</p></div>
+  <table class="cmp"><thead><tr><th></th><th>엑셀 수작업</th><th class="us">로켓단</th></tr></thead><tbody>
+    <tr><td>통학 거리</td><td class="old">학생 주소를 보고 사람이 판단</td><td class="new">지도 기반 거리와 소요시간을 자동 계산</td></tr>
+    <tr><td>학생 희망</td><td class="old">1~3지망을 보며 하나씩 조정</td><td class="new">지망을 점수에 반영해 한 번에 계산</td></tr>
+    <tr><td>조건이 바뀔 때</td><td class="old">정원이나 기준이 바뀌면 다시 맞춤</td><td class="new">조건을 바꾸고 다시 계산하면 바로 새 추천안</td></tr>
+    <tr><td>결과 설명</td><td class="old">필요할 때 따로 정리</td><td class="new">학생별 점수 근거와 다른 병원 점수를 자동 제공</td></tr>
+    <tr><td>최종 결정</td><td class="old">교수자</td><td class="new">교수자 (시스템은 추천안만 제공)</td></tr>
+  </tbody></table>
+</div></section>
+
+<section id="demo"><div class="wrap">
+  <div class="sec-h"><div class="tag">직접 해 보기</div><h2>비중을 바꾸면 추천이 바뀝니다</h2><p>슬라이더를 움직여 보세요. 통학 거리를 중요하게 보면 가까운 병원이, 희망을 중요하게 보면 희망 병원이 올라옵니다.</p></div>
+  <div class="demo">
+    <div>
+      <h3>예시 학생 한 명</h3>
+      <p>1지망 고려대학교구로병원, 2지망 서울특별시서남병원을 적은 학생입니다.</p>
+      <div class="wl"><span id="dLblP">희망 병원 30%</span><span id="dLblD">통학 거리 70%</span></div>
+      <input type="range" id="dSlider" min="0" max="100" step="5" value="70" aria-label="통학 거리와 희망 병원의 비중">
+      <div class="hint">왼쪽은 희망 병원, 오른쪽은 통학 거리의 비중이 커집니다. 예시 값으로 계산한 화면이며 실제 데이터가 아닙니다.</div>
+    </div>
+    <div id="dRows"></div>
+  </div>
+</div></section>
+
 <section id="numbers" class="alt"><div class="wrap">
   <div class="sec-h"><div class="tag">시험 결과</div><h2>숫자로 보는 로켓단</h2><p>가상 학생 명단으로 시험한 결과입니다.</p></div>
   <div class="stats">
-    <div class="stat"><div class="from">&nbsp;</div><div class="big">221<small> 명</small></div><div class="t">시험한 가상 학생 수</div></div>
-    <div class="stat"><div class="from">&nbsp;</div><div class="big">9<small> 곳</small></div><div class="t">4학년 1학기 관리 실습 병원</div></div>
-    <div class="stat"><div class="from">무작위 배정 56.7분</div><div class="big">35<small> 분</small></div><div class="t">평균 통학시간</div></div>
-    <div class="stat"><div class="from">무작위 배정 19.4%</div><div class="big">76<small> %</small></div><div class="t">지망 충족률</div></div>
+    <div class="stat"><div class="from">&nbsp;</div><div class="big"><span class="cnt" data-n="221">221</span><small> 명</small></div><div class="t">시험한 가상 학생 수</div></div>
+    <div class="stat"><div class="from">&nbsp;</div><div class="big"><span class="cnt" data-n="9">9</span><small> 곳</small></div><div class="t">4학년 1학기 관리 실습 병원</div></div>
+    <div class="stat"><div class="from">무작위 배정 56.7분</div><div class="big"><span class="cnt" data-n="35">35</span><small> 분</small></div><div class="t">평균 통학시간</div></div>
+    <div class="stat"><div class="from">무작위 배정 19.4%</div><div class="big"><span class="cnt" data-n="76">76</span><small> %</small></div><div class="t">지망 충족률</div></div>
   </div>
   <div class="note">가상 명단과 무작위 배정 시뮬레이션(정원은 지킴) 기준입니다. 실제 학과의 배정 결과와 비교한 값이 아닙니다.</div>
 </div></section>
@@ -2204,7 +2289,7 @@ LANDING_PAGE = """<!DOCTYPE html>
 <section id="news" class="alt"><div class="wrap">
   <div class="sec-h"><div class="tag">소식</div><h2>업데이트</h2></div>
   <div class="news"><ul>
-    <li><b>__APP_VERSION__</b><span>소개 페이지 문구와 줄바꿈을 정리했습니다. (현재 버전)</span></li>
+    <li><b>__APP_VERSION__</b><span>소개 페이지에 화면 예시, 비중 체험, 수작업과의 비교를 추가했습니다. (현재 버전)</span></li>
     <li><b>v11</b><span>소개 페이지를 홈페이지 형태로 개편했습니다.</span></li>
     <li><b>v10</b><span>학생 상세 화면에 거주지와 병원 위치 지도를 추가하고, 결과 표에 정렬과 페이지 나누기를 넣었습니다.</span></li>
     <li><b>v10</b><span>화면에서 이름과 학번의 일부를 가리도록 했습니다.</span></li>
@@ -2225,6 +2310,51 @@ LANDING_PAGE = """<!DOCTYPE html>
   <div class="links"><a href="/app">서비스 시작하기</a>__GUIDE_FOOT__</div>
   로켓단 · 간호학과 실습지 배정 추천 시스템 · 캡스톤디자인 작품
 </div></footer>
+<script>
+(function () {
+  /* 비중 체험: 앱과 같은 환산(15분=100점, 90분 이상=0점) */
+  var H = [
+    {n: '고려대학교구로병원', t: 47, p: 100, g: '1지망'},
+    {n: '서울특별시서남병원', t: 50, p: 70, g: '2지망'},
+    {n: '단원병원', t: 21, p: 10, g: '지망 외'},
+    {n: '시화병원', t: 28, p: 10, g: '지망 외'}
+  ];
+  var sl = document.getElementById('dSlider'), box = document.getElementById('dRows');
+  function esc(x) { return String(x).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
+  function draw() {
+    var w = +sl.value / 100;
+    document.getElementById('dLblD').textContent = '통학 거리 ' + sl.value + '%';
+    document.getElementById('dLblP').textContent = '희망 병원 ' + (100 - sl.value) + '%';
+    var r = H.map(function (h) {
+      var d = Math.max(0, Math.min(100, 100 - (h.t - 15) / 75 * 100));
+      return {n: h.n, t: h.t, g: h.g, s: d * w + h.p * (1 - w)};
+    }).sort(function (a, b) { return b.s - a.s; });
+    box.innerHTML = r.map(function (x, i) {
+      return '<div class="dr' + (i === 0 ? ' top' : '') + '"><div><span class="nm">' + esc(x.n) + (i === 0 ? '<em>추천</em>' : '') + '</span><div class="sub">' + esc(x.g) + ' · 통학 약 ' + x.t + '분</div></div><div class="sc">' + x.s.toFixed(1) + '점</div><div class="tr"><i style="width:' + Math.max(2, x.s) + '%"></i></div></div>';
+    }).join('');
+  }
+  sl.addEventListener('input', draw); draw();
+
+  /* 숫자 올라가는 효과 */
+  var els = document.querySelectorAll('.cnt');
+  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (still || !('IntersectionObserver' in window)) return;
+  function run(el) {
+    var to = +el.getAttribute('data-n'), t0 = null;
+    function step(ts) {
+      if (t0 === null) t0 = ts;
+      var k = Math.min(1, (ts - t0) / 1100), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = Math.round(to * e);
+      if (k < 1) requestAnimationFrame(step); else el.textContent = to;
+    }
+    el.textContent = '0'; requestAnimationFrame(step);
+  }
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { run(e.target); io.unobserve(e.target); } });
+  }, {threshold: 0.6});
+  els.forEach(function (el) { io.observe(el); });
+})();
+</script>
 </body>
 </html>
 """
