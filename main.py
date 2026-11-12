@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v10.5 거주지-병원 지도를 네이버 지도로 변경(Dynamic Map 미설정 시 기존 지도로 대체)
   v10.4 자문 반영: 문구·이모지 정리, 엑셀 버튼 위치, 20명 단위 페이지, 열 정렬, 거주지-병원 지도(상세·다른 병원)
   v10.3 실습일수 표시(8~10일 규칙): 8일 미만이면 경고, 오늘이 목·금이면 시작일을 다음 월요일로
   v10.2 종료일 기본값: 시작일이 속한 주의 다음 주 금요일(휴일이면 그 전 평일)
@@ -52,7 +53,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v10.4"
+APP_VERSION = "v10.5"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -991,7 +992,7 @@ async def get_config():
     if TRANSIT_AVAILABLE:
         addr = load_hospital_addresses()
         missing = sum(1 for h in all_hospital_names() if norm_h(h) not in addr)
-    return {"transit_available": TRANSIT_AVAILABLE, "transit_mode": TRANSIT_MODE, "hospitals_missing_address": missing, "auth_required": AUTH_REQUIRED, "version": APP_VERSION}
+    return {"transit_available": TRANSIT_AVAILABLE, "transit_mode": TRANSIT_MODE, "hospitals_missing_address": missing, "auth_required": AUTH_REQUIRED, "version": APP_VERSION, "map_key_id": NAVER_KEY_ID or ""}
 
 
 @app.get("/api/v1/curriculum")
@@ -1724,6 +1725,7 @@ window.addEventListener('load', async () => {
   initDates();
   try { CURRICULUM = await (await fetch('/api/v1/curriculum')).json(); } catch (e) {}
   try { CONFIG = await (await fetch('/api/v1/config')).json(); } catch (e) { CONFIG = {}; }
+  loadNaverMap();
   if (CONFIG.auth_required && !TOKEN) $('auth').style.display = 'flex';
   if (CONFIG.transit_available) {
     const m = CONFIG.hospitals_missing_address;
@@ -1928,7 +1930,31 @@ function kmBetween(a, b) {
   const h = Math.sin(dLa / 2) ** 2 + Math.cos(rad(a[1])) * Math.cos(rad(b[1])) * Math.sin(dLo / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
+let NAVER_FAIL = false;
+window.navermap_authFailure = function () { NAVER_FAIL = true; };
+function loadNaverMap() {
+  if (!CONFIG.map_key_id || window.naver) return;
+  const sc = document.createElement('script');
+  sc.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=' + encodeURIComponent(CONFIG.map_key_id);
+  document.head.appendChild(sc);
+}
+function pin(color, label) {
+  return `<div style="transform:translate(-50%,-100%);text-align:center;white-space:nowrap"><div style="display:inline-block;background:#fff;border:2px solid ${color};border-radius:8px;padding:3px 8px;font:700 12px sans-serif;color:#0f172a;box-shadow:0 2px 6px rgba(0,0,0,.2)">${esc(label)}</div><div style="width:0;height:0;margin:0 auto;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid ${color}"></div></div>`;
+}
+function drawNaver(el, s, h, hname) {
+  const N = naver.maps, a = new N.LatLng(s[1], s[0]), b = new N.LatLng(h[1], h[0]);
+  const m = new N.Map(el, {center: a, zoom: 13, scaleControl: false, mapDataControl: false});
+  new N.Polyline({map: m, path: [a, b], strokeColor: '#0f766e', strokeWeight: 4, strokeOpacity: 0.9, strokeStyle: 'shortdash'});
+  new N.Marker({position: a, map: m, icon: {content: pin('#d97706', '거주지(동 단위)'), anchor: new N.Point(0, 0)}});
+  new N.Marker({position: b, map: m, icon: {content: pin('#1d4ed8', hname), anchor: new N.Point(0, 0)}});
+  m.fitBounds(new N.LatLngBounds(a, b), {top: 50, right: 40, bottom: 30, left: 40});
+  const o = {remove() { try { m.destroy(); } catch (e) {} }};
+  MAPS.push(o); return o;
+}
 function drawMap(el, s, h, hname) {
+  if (window.naver && window.naver.maps && !NAVER_FAIL) {
+    try { return drawNaver(el, s, h, hname); } catch (e) {}
+  }
   if (!window.L) { el.innerHTML = '<div class="mapnone">지도를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.</div>'; return null; }
   const m = L.map(el, {scrollWheelZoom: false});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(m);
