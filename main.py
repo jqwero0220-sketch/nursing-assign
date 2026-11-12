@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v10.4 자문 반영: 문구·이모지 정리, 엑셀 버튼 위치, 20명 단위 페이지, 열 정렬, 거주지-병원 지도(상세·다른 병원)
   v10.3 실습일수 표시(8~10일 규칙): 8일 미만이면 경고, 오늘이 목·금이면 시작일을 다음 월요일로
   v10.2 종료일 기본값: 시작일이 속한 주의 다음 주 금요일(휴일이면 그 전 평일)
   v10.1 실습 기간 기본값: 시작일=오늘(휴일이면 다음 평일)
@@ -51,7 +52,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v10.3"
+APP_VERSION = "v10.4"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -474,6 +475,18 @@ def load_hospital_addresses() -> Dict[str, str]:
     return {norm_h(k): str(v).strip() for k, v in raw.items() if str(v).strip()}
 
 
+def cached_ll(query: str) -> Optional[List[float]]:
+    """이미 조회해 둔 주소의 [경도, 위도]. 새로 조회하지 않는다(없으면 None)."""
+    if not query:
+        return None
+    v = _load_cache()["geo"].get(query)
+    return [v[0], v[1]] if v else None
+
+
+def hosp_ll(hospital: str) -> Optional[List[float]]:
+    return cached_ll(_ADDR_MAP.get(norm_h(hospital), ""))
+
+
 def lookup_cached(dong: str, hospital: str) -> Optional[dict]:
     addr = _ADDR_MAP.get(norm_h(hospital))
     if not dong or not addr:
@@ -656,6 +669,7 @@ def build_alts(pair_map: Dict[str, dict], allowed: List[str], assigned_h: str) -
     others = [{
         "hospital": h, "composite_score": p["composite_score"],
         "travel_time_minutes": p["travel_time_minutes"], "preference_status": p["pref_status"],
+        "h_ll": hosp_ll(h),
     } for h, p in ranked if h != assigned_h][:3]
     return others, pair_map[assigned_h]["composite_score"] >= best_p["composite_score"], best_h
 
@@ -725,6 +739,8 @@ def result_row(stu: dict, pair: dict, hospital: str, rank: Optional[int],
         "gpa": stu["gpa"],
         "birth_year": stu["birth_year"],
         "address": stu["address"],
+        "s_ll": cached_ll(stu.get("dong", "")),
+        "h_ll": hosp_ll(hospital),
         "preference_status": pair["pref_status"],
         "travel_time_minutes": pair["travel_time_minutes"],
         "transfers": pair["transfers"],
@@ -1189,6 +1205,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>간호학과 스마트 실습지 최적 배정 시스템</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
   :root {
     --navy:#0f172a; --blue:#1e3a8a; --teal:#0d9488; --teal-d:#0f766e; --teal-l:#ccfbf1; --amber:#f59e0b;
@@ -1334,7 +1352,22 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .tabs { display:flex; gap:4px; border-bottom:2px solid var(--line); padding:0 14px; flex-wrap:wrap; align-items:center; }
   .tab { border:none; background:none; padding:14px 16px; font-weight:700; color:var(--muted); border-bottom:3px solid transparent; margin-bottom:-2px; cursor:pointer; }
   .tab.on { color:var(--blue); border-bottom-color:var(--blue); }
-  .tabs .search { margin-left:auto; width:210px; padding:8px 12px; }
+  .tabs .xl { margin-left:auto; }
+  .tabs .search { width:210px; padding:8px 12px; margin-left:8px; }
+  th.sortable { cursor:pointer; user-select:none; }
+  th.sortable:hover { color:var(--navy); }
+  .ar { display:inline-block; width:12px; color:var(--blue); font-size:10px; }
+  .pager { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px 16px; border-top:1px solid var(--line); font-size:13px; color:var(--muted); }
+  .pager .pg { display:flex; gap:4px; flex-wrap:wrap; }
+  .pager button { min-width:34px; height:34px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; font-size:13px; color:#334155; padding:0 8px; }
+  .pager button.on { background:var(--blue); border-color:var(--blue); color:#fff; font-weight:700; }
+  .pager button:disabled { opacity:.4; cursor:default; }
+  .map { height:220px; border-radius:10px; overflow:hidden; border:1px solid var(--line); margin-top:4px; }
+  .mapnone { font-size:13px; color:var(--muted); padding:6px 0; }
+  .alt.click { cursor:pointer; } .alt.click:hover { color:var(--blue); }
+  .altmap { display:none; margin:4px 0 10px; } .altmap.open { display:block; }
+  .alt .lnk { color:var(--blue); font-size:12px; margin-left:6px; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:baseline; }
   .pane { display:none; } .pane.on { display:block; }
   .tbl-wrap { overflow-x:auto; }
   table.tbl { width:100%; min-width:720px; border-collapse:collapse; font-size:14px; }
@@ -1417,16 +1450,16 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   <!-- 1단계 -->
   <section id="step1" class="card step">
-    <h2>어떤 실습을 배정할까요?</h2>
-    <p class="lead">배정 방식과 교과목을 고르면 해당 교과목의 실습 병원이 자동으로 불러와집니다.</p>
+    <h2>배정 조건</h2>
+    <p class="lead">배정 방식과 교과목을 선택하면 해당 교과목의 실습 병원 목록을 불러옵니다.</p>
 
     <div class="grid g2" style="margin-bottom:18px">
       <label class="mode on" id="modeG"><input type="radio" name="mode" value="global" checked onchange="onModeChange()">
         <b>전체 병원 동시 배정 <span class="pill hit" style="margin-left:4px">추천</span></b>
-        <span>모든 학생과 모든 병원을 한 번에 최적화합니다. 학생 한 명은 병원 한 곳에만 배정됩니다.</span></label>
+        <span>모든 학생과 병원을 한 번에 계산합니다. 학생은 병원 한 곳에만 배정됩니다.</span></label>
       <label class="mode" id="modeS"><input type="radio" name="mode" value="single" onchange="onModeChange()">
         <b>단일 병원 순위</b>
-        <span>병원 하나를 골라 지원자의 종합점수 순위를 매기고 정원까지 배정합니다.</span></label>
+        <span>병원 한 곳을 선택해 지원자의 종합점수 순위를 매기고 정원까지 배정합니다.</span></label>
     </div>
 
     <div class="grid g3">
@@ -1451,7 +1484,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <div class="wbar"><span id="wPrefLbl">희망 병원 30%</span><span id="wDistLbl">통학 거리 70%</span></div>
         <input type="range" id="wDist" min="0" max="100" step="5" value="70" oninput="syncW()" aria-label="통학 거리와 희망 병원의 비중">
         <input type="hidden" id="wPref" value="30">
-        <div class="hint">왼쪽으로 움직이면 희망 병원을, 오른쪽으로 움직이면 통학 거리를 더 중요하게 봅니다.</div>
+        <div class="hint">왼쪽은 희망 병원, 오른쪽은 통학 거리의 비중이 커집니다.</div>
 
         <h4>실습 기간</h4>
         <div class="grid g2">
@@ -1461,7 +1494,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <div class="hint" id="dayCount" style="font-weight:700"></div>
 
         <h4>병원별 정원</h4>
-        <div class="hint" style="margin:0 0 10px">병원마다 받을 인원을 정합니다. 칸을 비우면 아래 '기본 정원'을 씁니다.</div>
+        <div class="hint" style="margin:0 0 10px">병원별 정원을 입력합니다. 비워 두면 아래 기본 정원을 적용합니다.</div>
         <div id="capTable" class="caps"></div>
         <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">
           <button type="button" class="btn btn-ghost btn-sm" id="capActualBtn" onclick="fillCaps('actual')" style="display:none">2025-1 실제 인원으로 채우기</button>
@@ -1494,25 +1527,25 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   <!-- 2단계 -->
   <section id="step2" class="card step" style="display:none">
-    <h2>학생 명단을 올려 주세요</h2>
-    <p class="lead">파일은 메모리에서만 처리되며 서버에 저장되지 않습니다.</p>
+    <h2>학생 명단 업로드</h2>
+    <p class="lead">파일은 메모리에서만 처리하며 서버에 저장하지 않습니다.</p>
     <div class="chips" id="condChips"></div>
 
     <div class="drop" id="drop">
-      <div class="big">엑셀(.xlsx) 또는 CSV 파일을 여기에 끌어다 놓으세요</div>
+      <div class="big">엑셀(.xlsx) 또는 CSV 파일을 이곳에 놓거나 선택하세요</div>
       <div class="sub" style="margin-bottom:14px">필수 열: 학번 · 이름 · 성별 · GPA · 출생연도 (나머지 열은 양식 샘플 참고)</div>
       <label class="btn btn-ghost btn-sm" style="cursor:pointer">파일 선택<input type="file" id="file" accept=".csv,.xlsx" style="display:none"></label>
       <div class="file-ok" id="fileOk"></div>
     </div>
     <div class="or">또는</div>
     <div class="tools">
-      <button class="btn btn-ghost btn-sm" onclick="loadSample()">✨ 샘플로 바로 체험</button>
-      <a class="btn btn-ghost btn-sm" href="/api/v1/template">📄 양식 샘플 다운로드</a>
+      <button class="btn btn-ghost btn-sm" onclick="loadSample()">샘플 명단 불러오기</button>
+      <a class="btn btn-ghost btn-sm" href="/api/v1/template">양식 샘플 다운로드</a>
     </div>
 
     <div class="actions">
       <button class="btn btn-ghost" onclick="goStep(1)">← 이전</button>
-      <button class="btn btn-primary" id="runBtn" onclick="run()">🚀 최적 배정 실행</button>
+      <button class="btn btn-primary" id="runBtn" onclick="run()">배정 실행</button>
     </div>
   </section>
 
@@ -1521,8 +1554,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     <div class="res-top">
       <div class="meta" id="resMeta"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="goStep(1)">⚙️ 조건 바꿔 다시 배정</button>
-        <button class="btn btn-primary btn-sm" onclick="exportXlsx()">📥 결과 엑셀 다운로드</button>
+        <button class="btn btn-ghost btn-sm" onclick="goStep(1)">조건 바꿔 다시 배정</button>
       </div>
     </div>
 
@@ -1533,20 +1565,22 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
     <div class="card" style="padding:0;overflow:hidden">
       <div class="tabs">
-        <button class="tab on" data-p="pA" onclick="showPane('pA')">✅ 배정 결과</button>
-        <button class="tab" data-p="pH" onclick="showPane('pH')">🏥 병원별 현황</button>
-        <button class="tab" data-p="pU" onclick="showPane('pU')">⏳ 미배정·사유</button>
-        <input type="search" class="search" id="q" placeholder="이름·학번·병원 검색" oninput="renderAssigned()">
+        <button class="tab on" data-p="pA" onclick="showPane('pA')">배정 결과</button>
+        <button class="tab" data-p="pH" onclick="showPane('pH')">병원별 현황</button>
+        <button class="tab" data-p="pU" onclick="showPane('pU')">미배정·사유</button>
+        <button class="btn btn-primary btn-sm xl" onclick="exportXlsx()">엑셀 다운로드</button>
+        <input type="search" class="search" id="q" placeholder="이름·학번·병원 검색" oninput="PG=1;renderAssigned()">
       </div>
       <div id="pA" class="pane on tbl-wrap">
         <table class="tbl"><thead><tr>
-          <th>순위</th><th class="l">병원</th><th>학번</th><th>이름</th><th>GPA</th>
-          <th title="학생이 적은 1~3지망과 배정 병원의 일치 여부">지망 반영</th>
-          <th title="TMAP 대중교통 소요시간. '약'은 지도 좌표 기반 추정, '추정'은 주소 기반 규칙 추정">통학시간</th>
-          <th title="통학 점수 × 거리 가중치 + 지망 점수 × 희망도 가중치">종합점수</th>
-          <th title="통학 부담(소요시간·환승·도보) 기반 규칙형 지수. 학습 모델이 아닙니다">만족도 지수</th>
+          <th class="sortable" onclick="sortBy('rank')">순위<span class="ar" id="ar_rank"></span></th><th class="l sortable" onclick="sortBy('hospital')">병원<span class="ar" id="ar_hospital"></span></th><th class="sortable" onclick="sortBy('student_id')">학번<span class="ar" id="ar_student_id"></span></th><th class="sortable" onclick="sortBy('name')">이름<span class="ar" id="ar_name"></span></th><th class="sortable" onclick="sortBy('gpa')">GPA<span class="ar" id="ar_gpa"></span></th>
+          <th class="sortable" onclick="sortBy('pref')" title="학생이 적은 1~3지망과 배정 병원의 일치 여부">지망 반영<span class="ar" id="ar_pref"></span></th>
+          <th class="sortable" onclick="sortBy('time')" title="TMAP 대중교통 소요시간. '약'은 지도 좌표 기반 추정, '추정'은 주소 기반 규칙 추정">통학시간<span class="ar" id="ar_time"></span></th>
+          <th class="sortable" onclick="sortBy('score')" title="통학 점수 × 거리 가중치 + 지망 점수 × 희망도 가중치">종합점수<span class="ar" id="ar_score"></span></th>
+          <th class="sortable" onclick="sortBy('sat')" title="통학 부담(소요시간·환승·도보) 기반 규칙형 지수. 학습 모델이 아닙니다">만족도 지수<span class="ar" id="ar_sat"></span></th>
         </tr></thead><tbody id="bodyA"></tbody></table>
-        <div class="sub" style="padding:10px 16px">행을 누르면 점수가 어떻게 계산됐는지 볼 수 있습니다. 통학시간 앞의 '약'은 지도 좌표 직선거리 기반 추정, '추정' 표시는 규칙 기반 추정치입니다.</div>
+        <div class="pager" id="pager"></div>
+        <div class="sub" style="padding:0 16px 12px">행을 누르면 점수 산출 내역을 볼 수 있습니다. 통학시간의 '약'은 좌표 직선거리 기반 추정, '추정'은 규칙 기반 추정입니다. 열 제목을 누르면 정렬됩니다.</div>
       </div>
       <div id="pH" class="pane tbl-wrap">
         <table class="tbl"><thead><tr><th class="l">병원</th><th>배정 / 정원</th><th>평균 통학</th><th>지망 일치 인원</th></tr></thead><tbody id="bodyH"></tbody></table>
@@ -1611,9 +1645,9 @@ function updateDayCount() {
   const a = $('startDate').value, b = $('endDate').value, el = $('dayCount');
   if (!a || !b) { el.textContent = ''; return; }
   const n = bizDays(a, b);
-  if (n < 8) { el.style.color = 'var(--bad)'; el.textContent = `⚠️ 실습일수 ${n}일 — 8일 미만이면 실습 이수가 되지 않습니다.`; }
-  else if (n > 10) { el.style.color = 'var(--bad)'; el.textContent = `⚠️ 실습일수 ${n}일 — 최대 10일을 넘습니다.`; }
-  else { el.style.color = 'var(--ok, #0f766e)'; el.textContent = `✓ 실습일수 ${n}일 (8~10일 충족)`; }
+  if (n < 8) { el.style.color = 'var(--bad)'; el.textContent = `실습일수 ${n}일: 8일 미만이면 실습 이수가 되지 않습니다.`; }
+  else if (n > 10) { el.style.color = 'var(--bad)'; el.textContent = `실습일수 ${n}일: 최대 10일을 넘습니다.`; }
+  else { el.style.color = 'var(--ok, #0f766e)'; el.textContent = `실습일수 ${n}일 (8~10일 충족)`; }
 }
 function defaultEnd(s) {   // 실습은 2주 안에 끝나고 보통 금요일: 시작일이 속한 주의 '다음 주 금요일'
   const d = pd_(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + 11);
@@ -1629,7 +1663,7 @@ function initDates() {
   }
   $('startDate').value = s; $('endDate').value = defaultEnd(s); updateDayCount();
 }
-function checkDate(inp) { const m = inp.value ? dateProblem(inp.value) : null; $('dateErr').textContent = m ? '⚠️ ' + m : ''; if (m) inp.value = ''; return !m; }
+function checkDate(inp) { const m = inp.value ? dateProblem(inp.value) : null; $('dateErr').textContent = m ? m : ''; if (m) inp.value = ''; return !m; }
 function onStartChange() { const s = $('startDate'); if (checkDate(s) && s.value) $('endDate').value = defaultEnd(s.value); updateDayCount(); }
 function syncW() {
   const a = $('wDist'), b = $('wPref'), d = Math.max(0, Math.min(100, parseInt(a.value) || 0));
@@ -1680,7 +1714,7 @@ async function updateHospitals() {
   const box = $('hospital'); box.innerHTML = '';
   try {
     const d = await (await fetch('/api/v1/hospitals?' + q)).json();
-    (d.hospitals || []).forEach(h => box.add(new Option(h.includes('방중') ? h + ' 🏖️' : h, h)));
+    (d.hospitals || []).forEach(h => box.add(new Option(h, h)));
     $('hospCount').textContent = `이 교과목의 실습 병원 ${(d.hospitals || []).length}곳`;
     ACTUAL_CAPS = d.actual_caps || {};
     buildCapTable(d.hospitals || []);
@@ -1693,10 +1727,10 @@ window.addEventListener('load', async () => {
   if (CONFIG.auth_required && !TOKEN) $('auth').style.display = 'flex';
   if (CONFIG.transit_available) {
     const m = CONFIG.hospitals_missing_address;
-    $('transitHint').textContent = '🚌 통학시간: ' + (CONFIG.transit_mode === 'tmap' ? 'TMAP 대중교통 실제 소요시간을 사용합니다. ' : '지도 좌표 기반 거리로 추정합니다. ')
-      + (m ? `병원 주소가 없는 ${m}곳은 규칙 기반 추정치로 대체됩니다. ` : '') + '첫 실행은 시간이 걸릴 수 있고, 이후에는 저장된 값을 사용합니다.';
+    $('transitHint').textContent = '통학시간: ' + (CONFIG.transit_mode === 'tmap' ? 'TMAP 대중교통 소요시간 사용. ' : '지도 좌표 직선거리로 추정. ')
+      + (m ? `병원 주소가 없는 ${m}곳은 규칙 기반 추정치를 씁니다. ` : '') + '첫 실행은 시간이 걸리며, 이후에는 저장된 값을 사용합니다.';
   } else {
-    $('transitHint').textContent = '🚌 지도 키가 설정되지 않아 통학시간은 규칙 기반 추정치로 계산됩니다.';
+    $('transitHint').textContent = '지도 키가 설정되지 않아 통학시간은 규칙 기반 추정치로 계산합니다.';
   }
   syncW();
   updateSubjects(); onModeChange();
@@ -1726,7 +1760,7 @@ function renderChips() {
 /* ===== 파일 ===== */
 function setFile(f) {
   FILE = f; const ok = $('fileOk');
-  ok.style.display = 'block'; ok.textContent = `✅ ${f.name} (${Math.max(1, Math.round(f.size / 1024))}KB)`;
+  ok.style.display = 'block'; ok.textContent = `${f.name} (${Math.max(1, Math.round(f.size / 1024))}KB)`;
 }
 $('file').addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
 const dz = $('drop');
@@ -1739,7 +1773,7 @@ async function loadSample() {
     const r = await fetch('/api/v1/sample-data?' + q);
     if (!r.ok) throw 0;
     setFile(new File([await r.blob()], '샘플_가상학생_60명.xlsx'));
-    toast('가상 학생 60명을 불러왔습니다. 이제 실행하세요.');
+    toast('가상 학생 60명을 불러왔습니다.');
   } catch (e) { toast('샘플 데이터를 불러오지 못했습니다.', true); }
 }
 
@@ -1768,7 +1802,7 @@ async function run() {
     if (!r.ok) { toast(d.detail || '요청 처리 중 오류가 발생했습니다.', true); return; }
     DATA = d; DATA._ctx = `${$('grade').value} ${$('semester').value}`; render(d); goStep(3);
   } catch (e) { toast('서버에 연결할 수 없습니다.', true); }
-  finally { b.disabled = false; b.textContent = '🚀 최적 배정 실행'; }
+  finally { b.disabled = false; b.textContent = '배정 실행'; }
 }
 
 /* ===== 결과 렌더 ===== */
@@ -1835,48 +1869,116 @@ function renderCharts(d) {
     <div class="legend">${pc.map(([l, col], i) => `<div><i style="background:${col}"></i>${l} <b>${pv[i]}명</b></div>`).join('')}</div></div></div>`;
   $('charts').innerHTML = html;
 }
+let SORT = {k: null, d: 1}, PG = 1;
+const PAGE = 20;
+const SORTVAL = {rank: r => r.rank, hospital: r => r.hospital, student_id: r => r.student_id, name: r => r.name, gpa: r => r.gpa,
+  pref: r => r.pref_score, time: r => r.travel_time_minutes, score: r => r.composite_score, sat: r => r.satisfaction_index};
+function sortBy(k) {
+  if (SORT.k !== k) SORT = {k, d: 1};
+  else if (SORT.d === 1) SORT.d = -1;
+  else SORT = {k: null, d: 1};
+  PG = 1; renderAssigned();
+}
+function goPage(p) { PG = p; renderAssigned(); const t = $('pA'); if (t) t.scrollIntoView({block: 'nearest'}); }
 function renderAssigned() {
   const q = $('q').value.trim().toLowerCase();
-  const rows = DATA.results.map((r, i) => [r, i]).filter(([r]) => !q || [r.name, r.student_id, r.hospital].some(v => String(v).toLowerCase().includes(q)));
-  $('bodyA').innerHTML = rows.map(([r, i]) => `<tr class="click" onclick="openDetail(${i})">
+  let rows = DATA.results.map((r, i) => [r, i]).filter(([r]) => !q || [r.name, r.student_id, r.hospital].some(v => String(v).toLowerCase().includes(q)));
+  if (SORT.k) {
+    const f = SORTVAL[SORT.k];
+    rows.sort(([a], [b]) => {
+      const x = f(a), y = f(b);
+      if (x === null || x === undefined) return 1;
+      if (y === null || y === undefined) return -1;
+      const c = (typeof x === 'number' && typeof y === 'number') ? x - y : String(x).localeCompare(String(y), 'ko', {numeric: true});
+      return c * SORT.d;
+    });
+  }
+  Object.keys(SORTVAL).forEach(k => { const e = $('ar_' + k); if (e) e.textContent = SORT.k === k ? (SORT.d === 1 ? '▲' : '▼') : ''; });
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  if (PG > pages) PG = pages;
+  const from = (PG - 1) * PAGE, view = rows.slice(from, from + PAGE);
+  $('bodyA').innerHTML = view.map(([r, i]) => `<tr class="click" onclick="openDetail(${i})">
     <td><span class="rk">${esc(r.rank)}위</span></td><td class="l">${esc(r.hospital)}</td><td>${esc(r.student_id)}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.gpa)}</td>
     <td><span class="pill ${r.preference_status.includes('일치') ? 'hit' : 'miss'}">${esc(r.preference_status)}</span></td>
     <td><b>${r.transit_source === 'TMAP' ? '' : '약 '}${esc(r.travel_time_minutes)}분</b>${r.transit_source === '추정' ? '<span class="sub"> 추정</span>' : ''}</td><td><span class="score">${esc(r.composite_score)}</span></td><td>${esc(r.satisfaction_index)}</td></tr>`).join('')
     || `<tr><td colspan="9" class="empty">${q ? '검색 결과가 없습니다.' : '배정된 학생이 없습니다.'}</td></tr>`;
+  const pg = [];
+  for (let p = 1; p <= pages; p++) if (p === 1 || p === pages || Math.abs(p - PG) <= 2) pg.push(p);
+  let btns = '', last = 0;
+  pg.forEach(p => { if (p - last > 1) btns += '<span style="padding:0 4px;align-self:center">…</span>'; btns += `<button class="${p === PG ? 'on' : ''}" onclick="goPage(${p})">${p}</button>`; last = p; });
+  $('pager').innerHTML = rows.length
+    ? `<span>총 ${rows.length}명 중 ${from + 1}–${from + view.length}번째</span><div class="pg"><button onclick="goPage(${PG - 1})" ${PG <= 1 ? 'disabled' : ''}>이전</button>${btns}<button onclick="goPage(${PG + 1})" ${PG >= pages ? 'disabled' : ''}>다음</button></div>`
+    : '';
 }
 function render(d) {
   $('resMeta').innerHTML = `<b>[${esc(d._ctx)}]</b> ${esc(d.period.start)} ~ ${esc(d.period.end)} · 대상 <b>${esc(d.target_hospital)}</b><br><span class="sub">${esc(d.optimization_method)}</span>`;
-  $('warn').innerHTML = d.warnings.length ? `<div class="alert"><b>⚠️ 데이터 확인 필요 (${d.warnings.length}건)</b><ul>${d.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>` : '';
+  $('warn').innerHTML = d.warnings.length ? `<div class="alert"><b>데이터 확인 필요 (${d.warnings.length}건)</b><ul>${d.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>` : '';
   renderHero(d); renderKpis(d); renderCharts(d); renderAssigned();
   $('bodyH').innerHTML = d.hospital_summary.map(h => `<tr><td class="l">${esc(h.hospital)}</td><td><b>${h.assigned}</b> / ${h.capacity}</td><td>${h.avg_travel === null ? '-' : esc(h.avg_travel) + '분'}</td><td>${h.pref_matched}명</td></tr>`).join('');
   $('bodyU').innerHTML = d.unassigned.map(u => `<tr><td><span class="pill ${u.status === '대기' ? 'wait' : 'bad'}">${esc(u.status)}</span></td><td>${esc(u.student_id)}</td><td><b>${esc(u.name)}</b></td><td>${esc(u.gpa)}</td><td class="l">${esc(u.reason)}</td></tr>`).join('')
-    || '<tr><td colspan="5" class="empty">미배정 학생이 없습니다. 🎉</td></tr>';
-  $('q').value = ''; showPane('pA');
+    || '<tr><td colspan="5" class="empty">미배정 학생이 없습니다.</td></tr>';
+  $('q').value = ''; SORT = {k: null, d: 1}; PG = 1; renderAssigned(); showPane('pA');
 }
 
 /* ===== 학생 상세 ===== */
+let MAPS = [];
+function killMaps() { MAPS.forEach(m => { try { m.remove(); } catch (e) {} }); MAPS = []; }
+function kmBetween(a, b) {
+  const R = 6371, rad = x => x * Math.PI / 180, dLa = rad(b[1] - a[1]), dLo = rad(b[0] - a[0]);
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(rad(a[1])) * Math.cos(rad(b[1])) * Math.sin(dLo / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function drawMap(el, s, h, hname) {
+  if (!window.L) { el.innerHTML = '<div class="mapnone">지도를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.</div>'; return null; }
+  const m = L.map(el, {scrollWheelZoom: false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(m);
+  const a = [s[1], s[0]], b = [h[1], h[0]];
+  L.polyline([a, b], {color: '#0f766e', weight: 3, dashArray: '6 6'}).addTo(m);
+  L.circleMarker(a, {radius: 8, color: '#fff', weight: 2, fillColor: '#d97706', fillOpacity: 1}).addTo(m).bindTooltip('거주지(동 단위)', {permanent: true, direction: 'top'});
+  L.circleMarker(b, {radius: 8, color: '#fff', weight: 2, fillColor: '#1d4ed8', fillOpacity: 1}).addTo(m).bindTooltip(esc(hname), {permanent: true, direction: 'top'});
+  m.fitBounds([a, b], {padding: [40, 40], maxZoom: 15});
+  MAPS.push(m); setTimeout(() => m.invalidateSize(), 60);
+  return m;
+}
+function mapNote(s, h) { return `거주지(동 단위 중심점)에서 병원까지 직선거리 약 ${num(kmBetween(s, h))}km. 실제 집 위치가 아니라 동네의 대략적인 위치입니다.`; }
+function toggleAlt(el, i, k) {
+  const r = DATA.results[i], a = r.alternatives[k], box = el.nextElementSibling;
+  if (box.classList.contains('open')) {
+    box.classList.remove('open');
+    if (box._m) { try { box._m.remove(); } catch (e) {} MAPS = MAPS.filter(x => x !== box._m); box._m = null; }
+    box.innerHTML = ''; return;
+  }
+  box.classList.add('open');
+  if (!r.s_ll || !a.h_ll) { box.innerHTML = '<div class="mapnone">위치 정보가 없어 지도를 표시할 수 없습니다.</div>'; return; }
+  box.innerHTML = '<div class="map"></div><div class="sub" style="margin-top:6px">' + mapNote(r.s_ll, a.h_ll) + '</div>';
+  box._m = drawMap(box.firstChild, r.s_ll, a.h_ll, a.hospital);
+}
 function openDetail(i) {
+  killMaps();
   const r = DATA.results[i], w = DATA.weights;
   const dc = r.dist_score * w.distance / 100, pc = r.pref_score * w.preference / 100;
-  const alts = (r.alternatives || []).map(a => `<div class="alt"><span>${esc(a.hospital)} <span class="sub">· ${esc(a.preference_status)} · 통학 ${esc(a.travel_time_minutes)}분</span></span><b>${esc(a.composite_score)}점</b></div>`).join('');
+  const alts = (r.alternatives || []).map((a, k) => `<div class="alt click" onclick="toggleAlt(this, ${i}, ${k})"><span>${esc(a.hospital)} <span class="sub">· ${esc(a.preference_status)} · 통학 ${esc(a.travel_time_minutes)}분</span><span class="lnk">지도</span></span><b>${esc(a.composite_score)}점</b></div><div class="altmap"></div>`).join('');
   const note = r.is_top_choice === false
     ? `이 학생의 최고점 병원은 <b>${esc(r.best_hospital)}</b>이지만, 병원 정원과 전체 최적화(모든 학생의 점수 합 최대화) 결과 <b>${esc(r.hospital)}</b>에 배정되었습니다.`
-    : (r.is_top_choice === true ? '이 학생에게 가장 점수가 높은 병원에 배정되었습니다. 👍' : '');
+    : (r.is_top_choice === true ? '이 학생에게 가장 점수가 높은 병원에 배정되었습니다.' : '');
+  const hasMap = r.s_ll && r.h_ll;
   $('sheet').innerHTML = `<button class="x" onclick="closeModal()" aria-label="닫기">×</button>
     <h3>${esc(r.name)} <span class="sub" style="font-weight:500">${esc(r.student_id)}</span></h3>
     <div class="sub">${esc(r.gender)} · GPA ${esc(r.gpa)} · ${esc(r.birth_year)}년생 · ${esc(r.address || '주소 없음')}</div>
     <div class="box" style="background:#f0fdfa"><b style="color:var(--teal-d)">${esc(r.hospital)}</b> · 병원 내 ${esc(r.rank)}순위 · 종합 <b>${esc(r.composite_score)}점</b></div>
-    <div class="box"><h4>종합 매칭점수는 이렇게 계산됐어요</h4>
+    <div class="box"><h4>거주지와 병원 위치</h4>${hasMap ? '<div class="map" id="mapMain"></div><div class="sub" style="margin-top:6px">' + mapNote(r.s_ll, r.h_ll) + '</div>' : '<div class="mapnone">위치 정보가 없어 지도를 표시할 수 없습니다.</div>'}</div>
+    <div class="box"><h4>종합 매칭점수 산출</h4>
       <div class="stack"><i style="width:${dc}%;background:var(--teal)"></i><i style="width:${pc}%;background:var(--amber)"></i></div>
-      <div class="eq"><span>🟩 통학 점수 ${num(r.dist_score)} × ${w.distance}%</span><b>${num(dc)}</b>
-        <span>🟨 지망 점수 ${num(r.pref_score)} (${esc(r.preference_status)}) × ${w.preference}%</span><b>${num(pc)}</b>
+      <div class="eq"><span><i class="dot" style="background:var(--teal)"></i>통학 점수 ${num(r.dist_score)} × ${w.distance}%</span><b>${num(dc)}</b>
+        <span><i class="dot" style="background:var(--amber)"></i>지망 점수 ${num(r.pref_score)} (${esc(r.preference_status)}) × ${w.preference}%</span><b>${num(pc)}</b>
         <span><b style="text-align:left">종합 매칭점수</b></span><b>${esc(r.composite_score)}</b></div></div>
     <div class="box"><h4>통학 (${r.transit_source === 'TMAP' ? 'TMAP 대중교통 · 평일 오전 8시 기준' : (r.transit_source === '직선거리' ? '지도 좌표 직선거리 기반 추정' : '규칙 기반 추정')})</h4><div class="eq"><span>소요시간</span><b>${esc(r.travel_time_minutes)}분</b><span>환승</span><b>${esc(r.transfers)}회</b><span>피로지수(MFI)</span><b>${esc(r.fatigue_index)}</b><span>예상 만족도 지수</span><b>${esc(r.satisfaction_index)}</b></div></div>
-    ${alts ? `<div class="box"><h4>다른 병원이었다면</h4>${alts}</div>` : ''}
+    ${alts ? `<div class="box"><h4>다른 병원 배정 시 (병원을 누르면 지도 표시)</h4>${alts}</div>` : ''}
     ${note ? `<div class="hint" style="margin-top:12px">${note}</div>` : ''}`;
   $('modal').classList.add('open');
+  if (hasMap) drawMap($('mapMain'), r.s_ll, r.h_ll, r.hospital);
 }
-function closeModal() { $('modal').classList.remove('open'); }
+function closeModal() { $('modal').classList.remove('open'); killMaps(); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 /* ===== 엑셀 내보내기 (서버에서 생성 → 외부 라이브러리 불필요) ===== */
