@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v11.7 소개 페이지 오른쪽 점 모양 구역 안내(PC 화면)
   v11.6 소개 페이지 순서 변경(소개 → 서비스 시작하기 → 사용법 → 순서), 자주 묻는 질문 추가
   v11.5 소개 페이지: 화면 예시, 거리·희망 비중 체험, 수작업과 비교, 숫자 올라가는 효과
   v11.4 소식(업데이트) 맨 위에 현재 버전 표시
@@ -64,7 +65,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response, Streami
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v11.6"
+APP_VERSION = "v11.7"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -2172,6 +2173,14 @@ LANDING_PAGE = """<!DOCTYPE html>
   .faq summary::after { content:'＋'; float:right; color:var(--muted); }
   .faq details[open] summary::after { content:'－'; }
   .faq p { margin:0; padding:0 20px 18px; color:var(--muted); font-size:15px; }
+  .dots { position:fixed; right:18px; top:50%; transform:translateY(-50%); z-index:4; display:none; flex-direction:column; gap:4px; }
+  .dots a { position:relative; display:block; width:26px; height:22px; }
+  .dots a::before { content:''; position:absolute; right:8px; top:7px; width:8px; height:8px; border-radius:50%; background:#cbd5e1; transition:all .2s; }
+  .dots a:hover::before { background:var(--teal); }
+  .dots a.on::before { background:var(--teal-d); width:10px; height:10px; right:7px; top:6px; box-shadow:0 0 0 4px rgba(13,148,136,.18); }
+  .dots a span { position:absolute; right:30px; top:1px; white-space:nowrap; background:var(--navy); color:#fff; font-size:12px; font-weight:600; padding:3px 10px; border-radius:6px; opacity:0; pointer-events:none; transition:opacity .15s; }
+  .dots a:hover span, .dots a:focus-visible span { opacity:1; }
+  @media (min-width:1100px) { .dots { display:flex; } }
   @media (max-width:860px) {
     .demo { grid-template-columns:1fr; }
     .g4, .stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -2193,6 +2202,7 @@ LANDING_PAGE = """<!DOCTYPE html>
 </div></header>
 
 <main>
+<nav class="dots" aria-label="구역 이동"><a href="#intro" data-s="intro" title="소개" aria-label="소개"><span>소개</span></a><a href="#why" data-s="why" title="왜 필요한가" aria-label="왜 필요한가"><span>왜 필요한가</span></a><a href="#compare" data-s="compare" title="비교" aria-label="비교"><span>비교</span></a><a href="#numbers" data-s="numbers" title="시험 결과" aria-label="시험 결과"><span>시험 결과</span></a><a href="#service" data-s="service" title="주요 서비스" aria-label="주요 서비스"><span>주요 서비스</span></a><a href="#start" data-s="start" title="서비스 시작하기" aria-label="서비스 시작하기"><span>서비스 시작하기</span></a><a href="#guide" data-s="guide" title="사용법" aria-label="사용법"><span>사용법</span></a><a href="#steps" data-s="steps" title="순서" aria-label="순서"><span>순서</span></a><a href="#news" data-s="news" title="소식" aria-label="소식"><span>소식</span></a></nav>
 <div class="hero" id="intro"><div class="wrap">
   <div class="eyebrow">간호학과 실습지 배정 추천 시스템</div>
   <h1>실습 배정의 모든 과정,<br>거리와 희망으로 스마트하게</h1>
@@ -2317,7 +2327,7 @@ LANDING_PAGE = """<!DOCTYPE html>
 <section id="news" class="alt"><div class="wrap">
   <div class="sec-h"><div class="tag">소식</div><h2>업데이트</h2></div>
   <div class="news"><ul>
-    <li><b>__APP_VERSION__</b><span>소개 페이지를 소개, 서비스 시작하기, 사용법, 순서 구성으로 바꿨습니다. (현재 버전)</span></li>
+    <li><b>__APP_VERSION__</b><span>소개 페이지에 구역 이동용 점 메뉴를 추가했습니다. (현재 버전)</span></li>
     <li><b>v11</b><span>소개 페이지를 홈페이지 형태로 개편했습니다.</span></li>
     <li><b>v10</b><span>학생 상세 화면에 거주지와 병원 위치 지도를 추가하고, 결과 표에 정렬과 페이지 나누기를 넣었습니다.</span></li>
     <li><b>v10</b><span>화면에서 이름과 학번의 일부를 가리도록 했습니다.</span></li>
@@ -2362,6 +2372,18 @@ LANDING_PAGE = """<!DOCTYPE html>
     }).join('');
   }
   sl.addEventListener('input', draw); draw();
+
+  /* 오른쪽 점 메뉴: 지금 보는 구역 표시 */
+  var dots = document.querySelectorAll('.dots a');
+  if (dots.length && 'IntersectionObserver' in window) {
+    var cur = null;
+    function mark(id) { dots.forEach(function (a) { a.classList.toggle('on', a.getAttribute('data-s') === id); }); }
+    var so = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { cur = e.target.id; mark(cur); } });
+    }, {rootMargin: '-45% 0px -50% 0px', threshold: 0});
+    dots.forEach(function (a) { var t = document.getElementById(a.getAttribute('data-s')); if (t) so.observe(t); });
+    mark('intro');
+  }
 
   /* 숫자 올라가는 효과 */
   var els = document.querySelectorAll('.cnt');
