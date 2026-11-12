@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v10.9 지도 문구 정리(거주지 표시, 동 기준 위치 안내)
   v10.8 화면에서 이름(가운데 글자)·학번(가운데 3자리) 가림 처리(엑셀 다운로드는 원본 유지)
   v10.7 지도에 거주지-병원 직선과 직선거리 다시 표시(v10.5와 같은 화면)
   v10.6 지도에서 직선·거리 표시 제거(거주지와 병원 두 위치만 표시)
@@ -56,7 +57,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v10.8"
+APP_VERSION = "v10.9"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -1958,7 +1959,7 @@ function drawNaver(el, s, h, hname) {
   const N = naver.maps, a = new N.LatLng(s[1], s[0]), b = new N.LatLng(h[1], h[0]);
   const m = new N.Map(el, {center: a, zoom: 13, scaleControl: false, mapDataControl: false});
   new N.Polyline({map: m, path: [a, b], strokeColor: '#0f766e', strokeWeight: 4, strokeOpacity: 0.9, strokeStyle: 'shortdash'});
-  new N.Marker({position: a, map: m, icon: {content: pin('#d97706', '거주지(동 단위)'), anchor: new N.Point(0, 0)}});
+  new N.Marker({position: a, map: m, icon: {content: pin('#d97706', '거주지'), anchor: new N.Point(0, 0)}});
   new N.Marker({position: b, map: m, icon: {content: pin('#1d4ed8', hname), anchor: new N.Point(0, 0)}});
   m.fitBounds(new N.LatLngBounds(a, b), {top: 50, right: 40, bottom: 30, left: 40});
   const o = {remove() { try { m.destroy(); } catch (e) {} }};
@@ -1973,13 +1974,13 @@ function drawMap(el, s, h, hname) {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(m);
   const a = [s[1], s[0]], b = [h[1], h[0]];
   L.polyline([a, b], {color: '#0f766e', weight: 3, dashArray: '6 6'}).addTo(m);
-  L.circleMarker(a, {radius: 8, color: '#fff', weight: 2, fillColor: '#d97706', fillOpacity: 1}).addTo(m).bindTooltip('거주지(동 단위)', {permanent: true, direction: 'top'});
+  L.circleMarker(a, {radius: 8, color: '#fff', weight: 2, fillColor: '#d97706', fillOpacity: 1}).addTo(m).bindTooltip('거주지', {permanent: true, direction: 'top'});
   L.circleMarker(b, {radius: 8, color: '#fff', weight: 2, fillColor: '#1d4ed8', fillOpacity: 1}).addTo(m).bindTooltip(esc(hname), {permanent: true, direction: 'top'});
   m.fitBounds([a, b], {padding: [40, 40], maxZoom: 15});
   MAPS.push(m); setTimeout(() => m.invalidateSize(), 60);
   return m;
 }
-function mapNote(s, h) { return `거주지(동 단위 중심점)에서 병원까지 직선거리 약 ${num(kmBetween(s, h))}km. 실제 집 위치가 아니라 동네의 대략적인 위치입니다.`; }
+function mapNote(s, h) { return `거주지에서 병원까지 직선거리 약 ${num(kmBetween(s, h))}km (동 기준 대략적인 위치)`; }
 function toggleAlt(el, i, k) {
   const r = DATA.results[i], a = r.alternatives[k], box = el.nextElementSibling;
   if (box.classList.contains('open')) {
