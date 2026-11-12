@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v11.1 소개 페이지를 홈페이지 형태로 개편(상단 메뉴·Why·숫자·서비스·소식), 사용설명서 링크(GUIDE_URL 환경변수)
   v11.0 소개 페이지(/) 추가, 배정 도구는 /app 으로 이동, 검색용 정보(robots.txt·sitemap.xml)
   v10.9 지도 문구 정리(거주지 표시, 동 기준 위치 안내)
   v10.8 화면에서 이름(가운데 글자)·학번(가운데 3자리) 가림 처리(엑셀 다운로드는 원본 유지)
@@ -58,7 +59,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response, Streami
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v11.0"
+APP_VERSION = "v11.1"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -2057,123 +2058,167 @@ LANDING_PAGE = """<!DOCTYPE html>
 <style>
   :root { --navy:#0f172a; --blue:#1e3a8a; --teal:#0d9488; --teal-d:#0f766e; --teal-l:#ccfbf1; --muted:#475569; --line:#e2e8f0; --bg:#f5f8fc; }
   * { box-sizing:border-box; }
-  html { scroll-behavior:smooth; }
+  html { scroll-behavior:smooth; scroll-padding-top:70px; }
   body { margin:0; font-family:'Pretendard',-apple-system,'Noto Sans KR','Malgun Gothic',sans-serif; color:var(--navy); background:#fff; line-height:1.65; }
-  .wrap { max-width:1040px; margin:0 auto; padding:0 22px; }
-  header.top { position:sticky; top:0; background:rgba(255,255,255,.94); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); z-index:5; }
-  .top-in { display:flex; align-items:center; justify-content:space-between; height:60px; }
-  .logo { font-weight:900; font-size:20px; letter-spacing:-.5px; color:var(--blue); text-decoration:none; }
-  .nav { display:flex; gap:22px; align-items:center; font-size:14px; font-weight:600; }
+  .wrap { max-width:1100px; margin:0 auto; padding:0 22px; }
+  .notice { background:#f0fdfa; border-bottom:1px solid #d5f3ee; font-size:13px; color:var(--teal-d); text-align:center; padding:8px 12px; }
+  header.top { position:sticky; top:0; background:rgba(255,255,255,.95); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); z-index:5; }
+  .top-in { display:flex; align-items:center; justify-content:space-between; height:64px; gap:20px; }
+  .logo { font-weight:900; font-size:21px; letter-spacing:-.5px; color:var(--blue); text-decoration:none; }
+  .nav { display:flex; gap:28px; align-items:center; font-size:15px; font-weight:600; }
   .nav a { color:var(--muted); text-decoration:none; }
   .nav a:hover { color:var(--navy); }
-  .btn { display:inline-block; background:var(--teal-d); color:#fff !important; padding:12px 22px; border-radius:10px; font-weight:700; text-decoration:none; font-size:15px; }
+  .btn { display:inline-block; background:var(--teal-d); color:#fff !important; padding:13px 24px; border-radius:10px; font-weight:700; text-decoration:none; font-size:15px; }
   .btn:hover { background:#0b5f58; }
-  .btn.sm { padding:8px 16px; font-size:14px; }
+  .btn.sm { padding:9px 18px; font-size:14px; }
   .btn.ghost { background:#fff; color:var(--navy) !important; border:1.5px solid var(--line); }
-  .hero { background:linear-gradient(180deg,#f0fdfa 0,#fff 100%); padding:84px 0 70px; }
+  .btn.ghost:hover { background:#f8fafc; }
+  .hero { background:linear-gradient(135deg,#e6faf6 0,#eef4ff 100%); padding:96px 0 84px; text-align:center; }
   .hero .eyebrow { color:var(--teal-d); font-weight:700; font-size:14px; margin-bottom:14px; }
-  .hero h1 { font-size:44px; line-height:1.25; letter-spacing:-1.2px; margin:0 0 18px; color:var(--navy); }
-  .hero p { font-size:18px; color:var(--muted); max-width:620px; margin:0 0 30px; }
-  .hero .cta { display:flex; gap:12px; flex-wrap:wrap; }
-  section { padding:64px 0; }
+  .hero h1 { font-size:46px; line-height:1.25; letter-spacing:-1.3px; margin:0 0 18px; }
+  .hero p { font-size:18px; color:var(--muted); max-width:640px; margin:0 auto 32px; }
+  .hero .cta { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  section { padding:72px 0; }
   section.alt { background:var(--bg); }
-  h2 { font-size:28px; letter-spacing:-.6px; margin:0 0 10px; }
-  .lead { color:var(--muted); margin:0 0 30px; max-width:640px; }
+  .sec-h { text-align:center; margin-bottom:38px; }
+  .sec-h .tag { color:var(--teal-d); font-weight:700; font-size:14px; margin-bottom:6px; }
+  h2 { font-size:30px; letter-spacing:-.7px; margin:0 0 10px; }
+  .sec-h p { color:var(--muted); margin:0 auto; max-width:620px; }
   .grid { display:grid; gap:16px; }
+  .g4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
   .g3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
   .g2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:22px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:24px; }
   .card h3 { margin:0 0 8px; font-size:17px; }
   .card p { margin:0; color:var(--muted); font-size:15px; }
-  .num { display:inline-flex; width:30px; height:30px; border-radius:50%; background:var(--teal-l); color:var(--teal-d); font-weight:800; align-items:center; justify-content:center; margin-bottom:12px; font-size:14px; }
-  .stat { text-align:center; padding:28px 18px; }
-  .stat .big { font-size:34px; font-weight:900; color:var(--teal-d); letter-spacing:-1px; }
+  .ico { width:40px; height:40px; border-radius:10px; background:var(--teal-l); color:var(--teal-d); font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:14px; }
+  .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+  .stat { text-align:center; background:#fff; border:1px solid var(--line); border-radius:14px; padding:28px 14px; }
+  .stat .big { font-size:36px; font-weight:900; color:var(--teal-d); letter-spacing:-1px; }
   .stat .big small { font-size:16px; color:var(--muted); font-weight:700; }
-  .stat .from { color:var(--muted); font-size:14px; margin-bottom:4px; }
-  .stat .t { font-weight:700; margin-top:6px; }
-  .note { font-size:13px; color:var(--muted); margin-top:16px; }
-  .score { background:#fff; border:1px solid var(--line); border-radius:14px; padding:22px; }
+  .stat .from { color:var(--muted); font-size:13px; min-height:20px; }
+  .stat .t { font-weight:700; margin-top:6px; font-size:15px; }
+  .note { font-size:13px; color:var(--muted); margin-top:16px; text-align:center; }
+  .svc { display:grid; grid-template-columns:1.1fr 1fr; gap:28px; align-items:center; background:#fff; border:1px solid var(--line); border-radius:18px; padding:32px; }
+  .svc h3 { font-size:24px; margin:0 0 10px; }
+  .svc p { color:var(--muted); margin:0 0 16px; }
+  .svc ul { margin:0 0 22px; padding-left:18px; color:var(--muted); font-size:15px; }
+  .svc li { margin:4px 0; }
+  .score { background:var(--bg); border-radius:14px; padding:22px; }
   .score .bar { display:flex; height:16px; border-radius:8px; overflow:hidden; background:#e2e8f0; margin:12px 0; }
   .score .row { display:flex; justify-content:space-between; font-size:14px; padding:4px 0; }
-  .final { background:var(--navy); color:#fff; border-radius:18px; padding:40px 34px; }
+  .news { background:#fff; border:1px solid var(--line); border-radius:14px; }
+  .news li { list-style:none; display:flex; gap:16px; padding:15px 22px; border-bottom:1px solid var(--line); font-size:15px; }
+  .news li:last-child { border-bottom:none; }
+  .news ul { margin:0; padding:0; }
+  .news b { color:var(--teal-d); min-width:50px; }
+  .final { background:var(--navy); color:#fff; border-radius:18px; padding:48px 34px; text-align:center; }
   .final h2 { color:#fff; }
-  .final p { color:#cbd5e1; margin:0 0 22px; max-width:620px; }
+  .final p { color:#cbd5e1; margin:0 auto 24px; max-width:620px; }
   footer { padding:34px 0 50px; color:var(--muted); font-size:13px; border-top:1px solid var(--line); }
-  @media (max-width:760px) {
-    .hero { padding:52px 0 44px; } .hero h1 { font-size:32px; } .hero p { font-size:16px; }
-    .g3, .g2 { grid-template-columns:1fr; } .nav a.hide { display:none; } section { padding:44px 0; }
+  footer .links { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:8px; }
+  footer a { color:var(--muted); }
+  @media (max-width:860px) {
+    .g4, .stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .svc { grid-template-columns:1fr; }
+  }
+  @media (max-width:640px) {
+    .hero { padding:56px 0 48px; } .hero h1 { font-size:31px; } .hero p { font-size:16px; }
+    .g3, .g2, .g4 { grid-template-columns:1fr; } .nav a.hide { display:none; } section { padding:48px 0; }
+    .nav { gap:14px; } h2 { font-size:25px; } .stat .big { font-size:30px; }
   }
 </style>
 </head>
 <body>
+<div class="notice">캡스톤디자인 작품 · 학생 명단 파일은 서버에 저장되지 않습니다</div>
 <header class="top"><div class="wrap top-in">
   <a class="logo" href="/">로켓단</a>
-  <nav class="nav"><a class="hide" href="#why">왜 필요한가</a><a class="hide" href="#how">작동 방식</a><a class="hide" href="#result">결과</a><a class="btn sm" href="/app">배정 시스템 열기</a></nav>
+  <nav class="nav"><a class="hide" href="#why">소개</a><a class="hide" href="#numbers">시험 결과</a><a class="hide" href="#service">서비스</a><a class="hide" href="#news">소식</a>__GUIDE_LINK__<a class="btn sm" href="/app">서비스 시작하기</a></nav>
 </div></header>
 
 <main>
 <div class="hero"><div class="wrap">
   <div class="eyebrow">간호학과 실습지 배정 추천 시스템</div>
-  <h1>통학 거리와 학생의 희망을<br>함께 계산해 배정안을 추천합니다</h1>
-  <p>실습 병원 배정은 지금도 엑셀로 손수 맞추는 일입니다. 로켓단은 학생의 통학 부담과 희망 병원을 한 번에 계산하고, 왜 그 병원인지 근거까지 보여 줍니다. 최종 결정은 교수자가 합니다.</p>
-  <div class="cta"><a class="btn" href="/app">배정 시스템 열기</a><a class="btn ghost" href="#how">작동 방식 보기</a></div>
+  <h1>실습 배정의 모든 과정,<br>거리와 희망으로 스마트하게</h1>
+  <p>통학 거리와 학생의 희망 병원을 함께 계산해 배정안을 추천하고, 왜 그 병원인지 근거까지 보여 줍니다. 최종 결정은 교수자가 합니다.</p>
+  <div class="cta"><a class="btn" href="/app">배정 시스템 열기</a><a class="btn ghost" href="#service">서비스 알아보기</a></div>
 </div></div>
 
 <section id="why"><div class="wrap">
-  <h2>왜 필요한가</h2>
-  <p class="lead">학생 수백 명을 정원이 다른 여러 병원에 나누는 일은 시간이 많이 걸리고, 결과에 대한 설명도 어렵습니다.</p>
-  <div class="grid g3">
-    <div class="card"><h3>수작업의 부담</h3><p>교수와 조교가 엑셀에서 학생과 병원을 하나씩 맞추고, 조건이 바뀔 때마다 처음부터 다시 조정합니다.</p></div>
-    <div class="card"><h3>멀리 가는 학생</h3><p>무작위에 가까운 배정에서는 집에서 먼 병원에 배정되는 학생이 생겨 통학 부담이 커집니다.</p></div>
-    <div class="card"><h3>희망과 다른 배정</h3><p>학생이 적은 1~3지망이 충분히 반영되지 않아, 결과를 받아들이기 어려운 경우가 있습니다.</p></div>
+  <div class="sec-h"><div class="tag">Why 로켓단?</div><h2>배정 업무를 더 합리적으로</h2><p>엑셀로 손수 맞추던 실습 배정을, 설명할 수 있는 추천안으로 바꿉니다.</p></div>
+  <div class="grid g4">
+    <div class="card"><div class="ico">거리</div><h3>통학 부담 반영</h3><p>지도 기반 거리와 소요시간으로, 멀리 가는 학생을 줄이는 방향으로 계산합니다.</p></div>
+    <div class="card"><div class="ico">희망</div><h3>학생 희망 반영</h3><p>1~3지망을 점수에 넣고, 거리와 희망의 비중은 슬라이더로 조절합니다.</p></div>
+    <div class="card"><div class="ico">근거</div><h3>근거를 보여 주는 결과</h3><p>학생마다 점수 계산 내역과 다른 병원이었을 때의 점수, 위치 지도를 확인할 수 있습니다.</p></div>
+    <div class="card"><div class="ico">결정</div><h3>최종 결정은 교수자</h3><p>시스템은 추천안을 제공하고, 검토와 확정은 교수자가 합니다.</p></div>
   </div>
 </div></section>
 
-<section id="how" class="alt"><div class="wrap">
-  <h2>작동 방식</h2>
-  <p class="lead">조건을 정하고 명단을 올리면, 병원별 정원을 지키면서 전체 점수가 가장 높은 배정안을 계산합니다.</p>
-  <div class="grid g3">
-    <div class="card"><div class="num">1</div><h3>조건 설정</h3><p>학년, 학기, 교과목과 실습 기간을 정하고, 통학 거리와 희망 병원 중 무엇을 더 중요하게 볼지 비중을 조절합니다. 병원별 정원도 입력합니다.</p></div>
-    <div class="card"><div class="num">2</div><h3>명단 업로드</h3><p>엑셀이나 CSV 명단을 올립니다. 파일은 서버에 저장하지 않고 처리 후 사라집니다.</p></div>
-    <div class="card"><div class="num">3</div><h3>추천안 확인</h3><p>병원별 배정 현황, 통학시간 분포, 지망 충족률을 확인하고 엑셀로 내려받습니다.</p></div>
+<section id="numbers" class="alt"><div class="wrap">
+  <div class="sec-h"><div class="tag">시험 결과</div><h2>숫자로 보는 로켓단</h2><p>가상 학생 명단으로 시험한 결과입니다.</p></div>
+  <div class="stats">
+    <div class="stat"><div class="from">&nbsp;</div><div class="big">221<small> 명</small></div><div class="t">시험한 가상 학생 수</div></div>
+    <div class="stat"><div class="from">&nbsp;</div><div class="big">9<small> 곳</small></div><div class="t">4학년 1학기 관리 실습 병원</div></div>
+    <div class="stat"><div class="from">무작위 배정 56.7분</div><div class="big">35<small> 분</small></div><div class="t">평균 통학시간</div></div>
+    <div class="stat"><div class="from">무작위 배정 19.4%</div><div class="big">76<small> %</small></div><div class="t">지망 충족률</div></div>
   </div>
-  <div class="grid g2" style="margin-top:16px">
+  <div class="note">가상 명단과 무작위 배정 시뮬레이션(정원은 지킴) 기준입니다. 실제 학과의 배정 결과와 비교한 값이 아닙니다.</div>
+</div></section>
+
+<section id="service"><div class="wrap">
+  <div class="sec-h"><div class="tag">주요 서비스</div><h2>실습지 배정 추천 시스템</h2></div>
+  <div class="svc">
+    <div>
+      <h3>조건을 정하고 명단을 올리면, 추천안이 나옵니다</h3>
+      <p>병원별 정원을 지키면서 전체 학생의 점수 합이 가장 높은 배정안을 계산합니다.</p>
+      <ul>
+        <li>학년·학기·교과목과 실습 기간(8~10일) 설정</li>
+        <li>병원별 정원 직접 입력</li>
+        <li>성별, GPA, 출생연도, 과거 실습 기관 조건</li>
+        <li>결과 표 정렬·검색, 엑셀 다운로드</li>
+        <li>화면에서 이름·학번 일부 가림</li>
+      </ul>
+      <a class="btn" href="/app">서비스 시작하기</a>
+    </div>
     <div class="score">
-      <h3 style="margin:0 0 4px;font-size:17px">점수는 이렇게 계산합니다</h3>
+      <b>점수는 이렇게 계산합니다</b>
       <div class="bar"><i style="width:40%;background:#0d9488"></i><i style="width:30%;background:#f59e0b"></i></div>
       <div class="row"><span>통학 점수 57.3 × 70%</span><b>40.1</b></div>
       <div class="row"><span>지망 점수 100 (1지망 일치) × 30%</span><b>30.0</b></div>
       <div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><b>종합 매칭점수</b><b>70.1</b></div>
-      <div class="note">예시 화면입니다. 비중은 슬라이더로 바꿀 수 있습니다.</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px">예시 화면입니다. 비중은 슬라이더로 바꿀 수 있습니다.</div>
     </div>
-    <div class="card">
-      <h3>학생별 근거를 보여 줍니다</h3>
-      <p>학생을 누르면 거주지와 병원의 위치를 지도로 보고, 점수가 어떻게 나왔는지, 다른 병원이었다면 몇 점이었는지 확인할 수 있습니다. 교수자가 결과를 검토하고 판단하는 데 필요한 정보입니다.</p>
-      <p style="margin-top:12px">화면에서는 이름과 학번의 일부를 가려 보여 줍니다.</p>
-    </div>
+  </div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><div class="ico">1</div><h3>조건 설정</h3><p>배정 방식, 교과목, 실습 기간, 거리와 희망의 비중, 병원별 정원을 정합니다.</p></div>
+    <div class="card"><div class="ico">2</div><h3>명단 업로드</h3><p>엑셀이나 CSV 명단을 올립니다. 파일은 서버에 저장하지 않고 처리 후 사라집니다.</p></div>
+    <div class="card"><div class="ico">3</div><h3>추천안 확인</h3><p>병원별 현황, 통학시간 분포, 지망 충족률을 보고 학생별 근거를 확인합니다.</p></div>
   </div>
 </div></section>
 
-<section id="result"><div class="wrap">
-  <h2>시험 결과</h2>
-  <p class="lead">가상 학생 명단 221명으로 시험했습니다. 정원을 지키면서 학생을 무작위로 배정한 결과와 비교했습니다.</p>
-  <div class="grid g2">
-    <div class="card stat"><div class="from">무작위 배정 56.7분</div><div class="big">35<small> 분</small></div><div class="t">평균 통학시간</div></div>
-    <div class="card stat"><div class="from">무작위 배정 19.4%</div><div class="big">76<small> %</small></div><div class="t">지망 충족률</div></div>
-  </div>
-  <div class="note">가상 명단과 무작위 배정 시뮬레이션 기준입니다. 실제 학과의 배정 결과와 비교한 값이 아닙니다.</div>
+<section id="news" class="alt"><div class="wrap">
+  <div class="sec-h"><div class="tag">소식</div><h2>업데이트</h2></div>
+  <div class="news"><ul>
+    <li><b>v11</b><span>소개 페이지를 홈페이지 형태로 개편했습니다.</span></li>
+    <li><b>v10</b><span>학생 상세 화면에 거주지와 병원 위치 지도를 추가하고, 결과 표에 정렬과 페이지 나누기를 넣었습니다.</span></li>
+    <li><b>v10</b><span>화면에서 이름과 학번의 일부를 가리도록 했습니다.</span></li>
+    <li><b>v10</b><span>병원별 정원을 화면에서 직접 입력할 수 있게 했습니다.</span></li>
+  </ul></div>
 </div></section>
 
-<section class="alt"><div class="wrap">
+<section><div class="wrap">
   <div class="final">
     <h2>결정은 교수자가, 근거는 시스템이</h2>
     <p>로켓단은 배정을 대신 결정하지 않습니다. 더 합리적으로 선택할 수 있도록 추천안과 그 이유를 제공합니다.</p>
-    <a class="btn" href="/app">배정 시스템 열기</a>
+    <a class="btn" href="/app">서비스 시작하기</a>
   </div>
 </div></section>
 </main>
 
-<footer><div class="wrap">로켓단 · 간호학과 실습지 배정 추천 시스템 · 캡스톤디자인 작품</div></footer>
+<footer><div class="wrap">
+  <div class="links"><a href="/app">서비스 시작하기</a>__GUIDE_FOOT__</div>
+  로켓단 · 간호학과 실습지 배정 추천 시스템 · 캡스톤디자인 작품
+</div></footer>
 </body>
 </html>
 """
@@ -2187,7 +2232,11 @@ def _base_url(request: Request) -> str:
 
 @app.get("/", response_class=HTMLResponse)
 def render_landing(request: Request):
-    return HTMLResponse(content=LANDING_PAGE.replace("__BASE__", _base_url(request)))
+    import html as _html
+    guide = os.environ.get("GUIDE_URL", "").strip()
+    link = f'<a href="{_html.escape(guide, quote=True)}" target="_blank" rel="noopener">사용설명서</a>' if guide.startswith("http") else ""
+    page = LANDING_PAGE.replace("__GUIDE_LINK__", link).replace("__GUIDE_FOOT__", link).replace("__BASE__", _base_url(request))
+    return HTMLResponse(content=page)
 
 
 @app.get("/app", response_class=HTMLResponse)
