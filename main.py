@@ -1,7 +1,8 @@
 """
-간호학과 스마트 실습지 최적 배정 시스템
+AI기반 간호실습 배치 의사결정 프로그램
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v12.0 프로그램 이름을 "AI기반 간호실습 배치 의사결정 프로그램"으로 변경(팀 이름 로켓단은 유지)
   v11.9 소개 페이지 구역마다 화면 높이에 맞게 꽉 채우고 가운데 정렬(영상 촬영용)
   v11.8 소개 페이지 숫자 키(1~9)로 구역 이동
   v11.7 소개 페이지 오른쪽 점 모양 구역 안내(PC 화면)
@@ -67,8 +68,8 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response, Streami
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v11.9"
-app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
+APP_VERSION = "v12.0"
+app = FastAPI(title=f"AI기반 간호실습 배치 의사결정 프로그램 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
 # 보안: 암호는 환경변수로 관리하고, 인증 후에는 토큰으로 API를 보호한다.
@@ -1218,7 +1219,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>로켓단 배정 시스템 | 간호학과 실습지 배정</title>
+<title>AI기반 간호실습 배치 의사결정 프로그램 | 로켓단</title>
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
@@ -1445,7 +1446,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
 <div id="auth" class="auth">
   <div class="auth-card">
     <h2 style="margin:0 0 4px;font-size:20px">보안 서버 인증</h2>
-    <div style="opacity:.75;font-size:13px">간호학과 스마트 실습지 최적 배정 시스템</div>
+    <div style="opacity:.75;font-size:13px">AI기반 간호실습 배치 의사결정 프로그램</div>
     <input type="password" id="authPw" placeholder="접속 암호 입력" autocomplete="current-password" onkeyup="if(event.key==='Enter')verifyPassword()">
     <div id="authErr" style="color:#fbbf24;font-size:13px;min-height:20px;margin-bottom:8px"></div>
     <button class="btn btn-primary" style="width:100%" onclick="verifyPassword()">시스템 접속하기</button>
@@ -1453,7 +1454,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
 </div>
 
 <header class="top"><div class="wrap top-in">
-  <a href="/" style="text-decoration:none;color:inherit" title="소개 페이지로"><div class="brand">로켓단<span>간호학과 실습지 최적 배정 시스템</span></div></a>
+  <a href="/" style="text-decoration:none;color:inherit" title="소개 페이지로"><div class="brand">로켓단<span>AI기반 간호실습 배치 의사결정 프로그램</span></div></a>
   <span class="ver">__APP_VERSION__</span>
 </div></header>
 
@@ -2054,14 +2055,14 @@ LANDING_PAGE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>로켓단 | 간호학과 실습지 배정 추천 시스템</title>
+<title>AI기반 간호실습 배치 의사결정 프로그램 | 로켓단</title>
 <meta name="description" content="통학 거리와 학생 희망을 함께 계산해 간호학과 실습 병원 배정안을 추천합니다. 최종 결정은 교수자가 하고, 시스템은 근거를 설명합니다.">
 <link rel="canonical" href="__BASE__/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="로켓단 | 간호학과 실습지 배정 추천 시스템">
+<meta property="og:title" content="AI기반 간호실습 배치 의사결정 프로그램 | 로켓단">
 <meta property="og:description" content="통학 거리와 학생 희망을 함께 계산해 실습 병원 배정안을 추천합니다.">
 <meta property="og:url" content="__BASE__/">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"로켓단 간호학과 실습지 배정 추천 시스템","url":"__BASE__/","applicationCategory":"EducationalApplication","inLanguage":"ko","description":"통학 거리와 학생 희망을 함께 계산해 간호학과 실습 병원 배정안을 추천하는 웹 서비스"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"AI기반 간호실습 배치 의사결정 프로그램 (로켓단)","url":"__BASE__/","applicationCategory":"EducationalApplication","inLanguage":"ko","description":"통학 거리와 학생 희망을 함께 계산해 간호학과 실습 병원 배정안을 추천하는 웹 서비스"}</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" onload="this.media='all'">
 <style>
   :root { --navy:#0f172a; --blue:#1e3a8a; --teal:#0d9488; --teal-d:#0f766e; --teal-l:#ccfbf1; --muted:#475569; --line:#e2e8f0; --bg:#f5f8fc; }
@@ -2214,7 +2215,7 @@ LANDING_PAGE = """<!DOCTYPE html>
 <main>
 <nav class="dots" aria-label="구역 이동"><a href="#intro" data-s="intro" title="소개" aria-label="소개"><span>소개<kbd>1</kbd></span></a><a href="#why" data-s="why" title="왜 필요한가" aria-label="왜 필요한가"><span>왜 필요한가<kbd>2</kbd></span></a><a href="#compare" data-s="compare" title="비교" aria-label="비교"><span>비교<kbd>3</kbd></span></a><a href="#numbers" data-s="numbers" title="시험 결과" aria-label="시험 결과"><span>시험 결과<kbd>4</kbd></span></a><a href="#service" data-s="service" title="주요 서비스" aria-label="주요 서비스"><span>주요 서비스<kbd>5</kbd></span></a><a href="#start" data-s="start" title="서비스 시작하기" aria-label="서비스 시작하기"><span>서비스 시작하기<kbd>6</kbd></span></a><a href="#guide" data-s="guide" title="사용법" aria-label="사용법"><span>사용법<kbd>7</kbd></span></a><a href="#steps" data-s="steps" title="순서" aria-label="순서"><span>순서<kbd>8</kbd></span></a><a href="#news" data-s="news" title="소식" aria-label="소식"><span>소식<kbd>9</kbd></span></a></nav>
 <div class="hero" id="intro"><div class="wrap">
-  <div class="eyebrow">간호학과 실습지 배정 추천 시스템</div>
+  <div class="eyebrow">AI기반 간호실습 배치 의사결정 프로그램</div>
   <h1>실습 배정의 모든 과정,<br>거리와 희망으로 스마트하게</h1>
   <p>통학 거리와 희망 병원을 함께 계산해 배정안을 추천하고, 근거까지 보여 줍니다.<br>최종 결정은 교수자가 합니다.</p>
   <div class="cta"><a class="btn" href="/app">배정 시스템 열기</a><a class="btn ghost" href="#service">서비스 알아보기</a></div>
@@ -2270,7 +2271,7 @@ LANDING_PAGE = """<!DOCTYPE html>
 </div></section>
 
 <section id="service" class="alt"><div class="wrap">
-  <div class="sec-h"><div class="tag">주요 서비스</div><h2>실습지 배정 추천 시스템</h2></div>
+  <div class="sec-h"><div class="tag">주요 서비스</div><h2>AI기반 간호실습 배치 의사결정 프로그램</h2></div>
   <div class="svc">
     <div>
       <h3>조건을 정하고 명단을 올리면, 추천안이 나옵니다</h3>
@@ -2337,7 +2338,7 @@ LANDING_PAGE = """<!DOCTYPE html>
 <section id="news" class="alt"><div class="wrap">
   <div class="sec-h"><div class="tag">소식</div><h2>업데이트</h2></div>
   <div class="news"><ul>
-    <li><b>__APP_VERSION__</b><span>소개 페이지 구역마다 화면 한 장에 꽉 차게 보이도록 했습니다. (현재 버전)</span></li>
+    <li><b>__APP_VERSION__</b><span>프로그램 이름을 "AI기반 간호실습 배치 의사결정 프로그램"으로 바꿨습니다. (현재 버전)</span></li>
     <li><b>v11</b><span>소개 페이지를 홈페이지 형태로 개편했습니다.</span></li>
     <li><b>v10</b><span>학생 상세 화면에 거주지와 병원 위치 지도를 추가하고, 결과 표에 정렬과 페이지 나누기를 넣었습니다.</span></li>
     <li><b>v10</b><span>화면에서 이름과 학번의 일부를 가리도록 했습니다.</span></li>
@@ -2356,7 +2357,7 @@ LANDING_PAGE = """<!DOCTYPE html>
 
 <footer><div class="wrap">
   <div class="links"><a href="/app">서비스 시작하기</a>__GUIDE_FOOT__</div>
-  로켓단 · 간호학과 실습지 배정 추천 시스템 · 캡스톤디자인 작품
+  로켓단 · AI기반 간호실습 배치 의사결정 프로그램 · 캡스톤디자인 작품
   <div class="keyhint">키보드 숫자 1~9를 누르면 해당 구역으로 이동합니다.</div>
 </div></footer>
 <script>
