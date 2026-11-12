@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v11.6 소개 페이지 순서 변경(소개 → 서비스 시작하기 → 사용법 → 순서), 자주 묻는 질문 추가
   v11.5 소개 페이지: 화면 예시, 거리·희망 비중 체험, 수작업과 비교, 숫자 올라가는 효과
   v11.4 소식(업데이트) 맨 위에 현재 버전 표시
   v11.3 소개 페이지 첫 문장을 짧게(한 줄로 이어지도록)
@@ -63,7 +64,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response, Streami
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v11.5"
+APP_VERSION = "v11.6"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -2164,6 +2165,13 @@ LANDING_PAGE = """<!DOCTYPE html>
   .dr .sc { font-weight:800; font-size:17px; color:var(--blue); text-align:right; }
   .dr .tr { grid-column:1 / 3; height:7px; border-radius:4px; background:#e2e8f0; overflow:hidden; }
   .dr .tr i { display:block; height:100%; background:var(--teal); transition:width .25s; }
+  .faq { max-width:780px; margin:0 auto; }
+  .faq details { background:#fff; border:1px solid var(--line); border-radius:12px; margin-bottom:10px; }
+  .faq summary { cursor:pointer; padding:16px 20px; font-weight:700; font-size:16px; list-style:none; }
+  .faq summary::-webkit-details-marker { display:none; }
+  .faq summary::after { content:'＋'; float:right; color:var(--muted); }
+  .faq details[open] summary::after { content:'－'; }
+  .faq p { margin:0; padding:0 20px 18px; color:var(--muted); font-size:15px; }
   @media (max-width:860px) {
     .demo { grid-template-columns:1fr; }
     .g4, .stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -2181,11 +2189,11 @@ LANDING_PAGE = """<!DOCTYPE html>
 <div class="notice">캡스톤디자인 작품 · 학생 명단 파일은 서버에 저장되지 않습니다</div>
 <header class="top"><div class="wrap top-in">
   <a class="logo" href="/">로켓단</a>
-  <nav class="nav"><a class="hide" href="#why">소개</a><a class="hide" href="#numbers">시험 결과</a><a class="hide" href="#service">서비스</a><a class="hide" href="#news">소식</a>__GUIDE_LINK__<a class="btn sm" href="/app">서비스 시작하기</a></nav>
+  <nav class="nav"><a class="hide" href="#intro">소개</a><a class="hide" href="#guide">사용법</a><a class="hide" href="#steps">순서</a><a class="btn sm" href="/app">서비스 시작하기</a></nav>
 </div></header>
 
 <main>
-<div class="hero"><div class="wrap">
+<div class="hero" id="intro"><div class="wrap">
   <div class="eyebrow">간호학과 실습지 배정 추천 시스템</div>
   <h1>실습 배정의 모든 과정,<br>거리와 희망으로 스마트하게</h1>
   <p>통학 거리와 희망 병원을 함께 계산해 배정안을 추천하고, 근거까지 보여 줍니다.<br>최종 결정은 교수자가 합니다.</p>
@@ -2230,21 +2238,7 @@ LANDING_PAGE = """<!DOCTYPE html>
   </tbody></table>
 </div></section>
 
-<section id="demo"><div class="wrap">
-  <div class="sec-h"><div class="tag">직접 해 보기</div><h2>비중을 바꾸면 추천이 바뀝니다</h2><p>슬라이더를 움직여 보세요. 통학 거리를 중요하게 보면 가까운 병원이, 희망을 중요하게 보면 희망 병원이 올라옵니다.</p></div>
-  <div class="demo">
-    <div>
-      <h3>예시 학생 한 명</h3>
-      <p>1지망 고려대학교구로병원, 2지망 서울특별시서남병원을 적은 학생입니다.</p>
-      <div class="wl"><span id="dLblP">희망 병원 30%</span><span id="dLblD">통학 거리 70%</span></div>
-      <input type="range" id="dSlider" min="0" max="100" step="5" value="70" aria-label="통학 거리와 희망 병원의 비중">
-      <div class="hint">왼쪽은 희망 병원, 오른쪽은 통학 거리의 비중이 커집니다. 예시 값으로 계산한 화면이며 실제 데이터가 아닙니다.</div>
-    </div>
-    <div id="dRows"></div>
-  </div>
-</div></section>
-
-<section id="numbers" class="alt"><div class="wrap">
+<section id="numbers"><div class="wrap">
   <div class="sec-h"><div class="tag">시험 결과</div><h2>숫자로 보는 로켓단</h2><p>가상 학생 명단으로 시험한 결과입니다.</p></div>
   <div class="stats">
     <div class="stat"><div class="from">&nbsp;</div><div class="big"><span class="cnt" data-n="221">221</span><small> 명</small></div><div class="t">시험한 가상 학생 수</div></div>
@@ -2255,7 +2249,7 @@ LANDING_PAGE = """<!DOCTYPE html>
   <div class="note">가상 명단과 무작위 배정 시뮬레이션(정원은 지킴) 기준입니다. 실제 학과의 배정 결과와 비교한 값이 아닙니다.</div>
 </div></section>
 
-<section id="service"><div class="wrap">
+<section id="service" class="alt"><div class="wrap">
   <div class="sec-h"><div class="tag">주요 서비스</div><h2>실습지 배정 추천 시스템</h2></div>
   <div class="svc">
     <div>
@@ -2279,17 +2273,51 @@ LANDING_PAGE = """<!DOCTYPE html>
       <div style="font-size:13px;color:var(--muted);margin-top:8px">예시 화면입니다. 비중은 슬라이더로 바꿀 수 있습니다.</div>
     </div>
   </div>
+  </div></section>
+
+<section id="start"><div class="wrap">
+  <div class="sec-h"><div class="tag">서비스 시작하기</div><h2>먼저 비중을 바꿔 보세요</h2><p>슬라이더를 움직여 보세요. 통학 거리를 중요하게 보면 가까운 병원이, 희망을 중요하게 보면 희망 병원이 올라옵니다.</p></div>
+  <div class="demo">
+    <div>
+      <h3>예시 학생 한 명</h3>
+      <p>1지망 고려대학교구로병원, 2지망 서울특별시서남병원을 적은 학생입니다.</p>
+      <div class="wl"><span id="dLblP">희망 병원 30%</span><span id="dLblD">통학 거리 70%</span></div>
+      <input type="range" id="dSlider" min="0" max="100" step="5" value="70" aria-label="통학 거리와 희망 병원의 비중">
+      <div class="hint">왼쪽은 희망 병원, 오른쪽은 통학 거리의 비중이 커집니다. 예시 값으로 계산한 화면이며 실제 데이터가 아닙니다.</div>
+    </div>
+    <div id="dRows"></div>
+  </div>
+  <div style="text-align:center;margin-top:28px"><a class="btn" href="/app" style="padding:16px 34px;font-size:17px">배정 시스템 열기</a></div>
+</div></section>
+
+<section id="guide" class="alt"><div class="wrap">
+  <div class="sec-h"><div class="tag">사용법</div><h2>처음 쓰는 분을 위한 안내</h2><p>자세한 화면별 설명은 사용설명서에서, 자주 묻는 내용은 아래에서 확인하세요.</p></div>
+  <div style="text-align:center;margin-bottom:24px">__GUIDE_BTN__</div>
+  <div class="faq">
+    <details><summary>학생 명단은 서버에 저장되나요?</summary><p>저장하지 않습니다. 올린 파일은 메모리에서 처리한 뒤 사라지고, 결과는 엑셀로 내려받아 보관합니다.</p></details>
+    <details><summary>명단 파일은 어떤 형식이어야 하나요?</summary><p>엑셀(.xlsx) 또는 CSV입니다. 필수 열은 학번, 이름, 성별, GPA, 출생연도이며, 양식 샘플을 내려받아 확인할 수 있습니다.</p></details>
+    <details><summary>통학시간 앞의 '약'은 무슨 뜻인가요?</summary><p>지도 좌표의 직선거리를 바탕으로 추정한 값이라는 뜻입니다. '추정'은 주소 정보가 부족해 규칙으로 계산한 값입니다.</p></details>
+    <details><summary>지도에 표시되는 거주지는 실제 집인가요?</summary><p>아닙니다. 주소가 동 단위까지만 있어서, 동네 기준의 대략적인 위치로 표시합니다.</p></details>
+    <details><summary>배정 결과를 그대로 확정하나요?</summary><p>아닙니다. 시스템은 추천안과 근거를 제공하고, 검토와 최종 결정은 교수자가 합니다.</p></details>
+    <details><summary>미배정 학생이 나오면 어떻게 하나요?</summary><p>미배정·사유 탭에서 이유(정원 부족, 조건 불일치 등)를 확인하고, 정원이나 조건을 조정해 다시 배정할 수 있습니다.</p></details>
+  </div>
+</div></section>
+
+<section id="steps"><div class="wrap">
+  <div class="sec-h"><div class="tag">순서</div><h2>세 단계로 끝납니다</h2><p>조건을 정하고, 명단을 올리고, 추천안을 확인합니다.</p></div>
   <div class="grid g3" style="margin-top:16px">
     <div class="card"><div class="ico">1</div><h3>조건 설정</h3><p>배정 방식, 교과목, 실습 기간, 거리와 희망의 비중, 병원별 정원을 정합니다.</p></div>
     <div class="card"><div class="ico">2</div><h3>명단 업로드</h3><p>엑셀이나 CSV 명단을 올립니다. 파일은 서버에 저장하지 않고 처리 후 사라집니다.</p></div>
     <div class="card"><div class="ico">3</div><h3>추천안 확인</h3><p>병원별 현황, 통학시간 분포, 지망 충족률을 보고 학생별 근거를 확인합니다.</p></div>
   </div>
+
+  <div style="text-align:center;margin-top:28px"><a class="btn" href="/app">서비스 시작하기</a></div>
 </div></section>
 
 <section id="news" class="alt"><div class="wrap">
   <div class="sec-h"><div class="tag">소식</div><h2>업데이트</h2></div>
   <div class="news"><ul>
-    <li><b>__APP_VERSION__</b><span>소개 페이지에 화면 예시, 비중 체험, 수작업과의 비교를 추가했습니다. (현재 버전)</span></li>
+    <li><b>__APP_VERSION__</b><span>소개 페이지를 소개, 서비스 시작하기, 사용법, 순서 구성으로 바꿨습니다. (현재 버전)</span></li>
     <li><b>v11</b><span>소개 페이지를 홈페이지 형태로 개편했습니다.</span></li>
     <li><b>v10</b><span>학생 상세 화면에 거주지와 병원 위치 지도를 추가하고, 결과 표에 정렬과 페이지 나누기를 넣었습니다.</span></li>
     <li><b>v10</b><span>화면에서 이름과 학번의 일부를 가리도록 했습니다.</span></li>
@@ -2371,7 +2399,8 @@ def render_landing(request: Request):
     import html as _html
     guide = os.environ.get("GUIDE_URL", "").strip()
     link = f'<a href="{_html.escape(guide, quote=True)}" target="_blank" rel="noopener">사용설명서</a>' if guide.startswith("http") else ""
-    page = LANDING_PAGE.replace("__GUIDE_LINK__", link).replace("__GUIDE_FOOT__", link).replace("__BASE__", _base_url(request)).replace("__APP_VERSION__", APP_VERSION)
+    btn = link.replace("<a ", '<a class="btn" ', 1) if link else '<span style="color:var(--muted);font-size:14px">사용설명서는 준비 중입니다.</span>'
+    page = LANDING_PAGE.replace("__GUIDE_BTN__", btn).replace("__GUIDE_LINK__", link).replace("__GUIDE_FOOT__", link).replace("__BASE__", _base_url(request)).replace("__APP_VERSION__", APP_VERSION)
     return HTMLResponse(content=page)
 
 
