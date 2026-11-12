@@ -2,6 +2,7 @@
 간호학과 스마트 실습지 최적 배정 시스템
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v10.6 지도에서 직선·거리 표시 제거(거주지와 병원 두 위치만 표시)
   v10.5 거주지-병원 지도를 네이버 지도로 변경(Dynamic Map 미설정 시 기존 지도로 대체)
   v10.4 자문 반영: 문구·이모지 정리, 엑셀 버튼 위치, 20명 단위 페이지, 열 정렬, 거주지-병원 지도(상세·다른 병원)
   v10.3 실습일수 표시(8~10일 규칙): 8일 미만이면 경고, 오늘이 목·금이면 시작일을 다음 월요일로
@@ -53,7 +54,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v10.5"
+APP_VERSION = "v10.6"
 app = FastAPI(title=f"간호학과 스마트 실습지 최적 배정 시스템 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -1944,7 +1945,6 @@ function pin(color, label) {
 function drawNaver(el, s, h, hname) {
   const N = naver.maps, a = new N.LatLng(s[1], s[0]), b = new N.LatLng(h[1], h[0]);
   const m = new N.Map(el, {center: a, zoom: 13, scaleControl: false, mapDataControl: false});
-  new N.Polyline({map: m, path: [a, b], strokeColor: '#0f766e', strokeWeight: 4, strokeOpacity: 0.9, strokeStyle: 'shortdash'});
   new N.Marker({position: a, map: m, icon: {content: pin('#d97706', '거주지(동 단위)'), anchor: new N.Point(0, 0)}});
   new N.Marker({position: b, map: m, icon: {content: pin('#1d4ed8', hname), anchor: new N.Point(0, 0)}});
   m.fitBounds(new N.LatLngBounds(a, b), {top: 50, right: 40, bottom: 30, left: 40});
@@ -1959,14 +1959,13 @@ function drawMap(el, s, h, hname) {
   const m = L.map(el, {scrollWheelZoom: false});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(m);
   const a = [s[1], s[0]], b = [h[1], h[0]];
-  L.polyline([a, b], {color: '#0f766e', weight: 3, dashArray: '6 6'}).addTo(m);
   L.circleMarker(a, {radius: 8, color: '#fff', weight: 2, fillColor: '#d97706', fillOpacity: 1}).addTo(m).bindTooltip('거주지(동 단위)', {permanent: true, direction: 'top'});
   L.circleMarker(b, {radius: 8, color: '#fff', weight: 2, fillColor: '#1d4ed8', fillOpacity: 1}).addTo(m).bindTooltip(esc(hname), {permanent: true, direction: 'top'});
   m.fitBounds([a, b], {padding: [40, 40], maxZoom: 15});
   MAPS.push(m); setTimeout(() => m.invalidateSize(), 60);
   return m;
 }
-function mapNote(s, h) { return `거주지(동 단위 중심점)에서 병원까지 직선거리 약 ${num(kmBetween(s, h))}km. 실제 집 위치가 아니라 동네의 대략적인 위치입니다.`; }
+function mapNote(s, h) { return '거주지는 동 단위 중심점으로, 실제 집 위치가 아니라 동네의 대략적인 위치입니다.'; }
 function toggleAlt(el, i, k) {
   const r = DATA.results[i], a = r.alternatives[k], box = el.nextElementSibling;
   if (box.classList.contains('open')) {
