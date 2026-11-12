@@ -2,6 +2,7 @@
 AI기반 간호실습 배치 의사결정 프로그램
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v12.1 화면 문구에서 "직선거리" 표현 정리(통학은 "지도 기반 예상 소요시간"으로 표시)
   v12.0 프로그램 이름을 "AI기반 간호실습 배치 의사결정 프로그램"으로 변경(팀 이름 로켓단은 유지)
   v11.9 소개 페이지 구역마다 화면 높이에 맞게 꽉 채우고 가운데 정렬(영상 촬영용)
   v11.8 소개 페이지 숫자 키(1~9)로 구역 이동
@@ -68,7 +69,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response, Streami
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v12.0"
+APP_VERSION = "v12.1"
 app = FastAPI(title=f"AI기반 간호실습 배치 의사결정 프로그램 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -1597,7 +1598,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
           <th class="sortable" onclick="sortBy('sat')" title="통학 부담(소요시간·환승·도보) 기반 규칙형 지수. 학습 모델이 아닙니다">만족도 지수<span class="ar" id="ar_sat"></span></th>
         </tr></thead><tbody id="bodyA"></tbody></table>
         <div class="pager" id="pager"></div>
-        <div class="sub" style="padding:0 16px 12px">행을 누르면 점수 산출 내역을 볼 수 있습니다. 통학시간의 '약'은 좌표 직선거리 기반 추정, '추정'은 규칙 기반 추정입니다. 열 제목을 누르면 정렬됩니다.</div>
+        <div class="sub" style="padding:0 16px 12px">행을 누르면 점수 산출 내역을 볼 수 있습니다. 통학시간의 '약'은 지도 기반 예상 소요시간, '추정'은 규칙 기반 추정입니다. 열 제목을 누르면 정렬됩니다.</div>
       </div>
       <div id="pH" class="pane tbl-wrap">
         <table class="tbl"><thead><tr><th class="l">병원</th><th>배정 / 정원</th><th>평균 통학</th><th>지망 일치 인원</th></tr></thead><tbody id="bodyH"></tbody></table>
@@ -1745,7 +1746,7 @@ window.addEventListener('load', async () => {
   if (CONFIG.auth_required && !TOKEN) $('auth').style.display = 'flex';
   if (CONFIG.transit_available) {
     const m = CONFIG.hospitals_missing_address;
-    $('transitHint').textContent = '통학시간: ' + (CONFIG.transit_mode === 'tmap' ? 'TMAP 대중교통 소요시간 사용. ' : '지도 좌표 직선거리로 추정. ')
+    $('transitHint').textContent = '통학시간: ' + (CONFIG.transit_mode === 'tmap' ? 'TMAP 대중교통 소요시간 사용. ' : '지도 기반 예상 소요시간. ')
       + (m ? `병원 주소가 없는 ${m}곳은 규칙 기반 추정치를 씁니다. ` : '') + '첫 실행은 시간이 걸리며, 이후에는 저장된 값을 사용합니다.';
   } else {
     $('transitHint').textContent = '지도 키가 설정되지 않아 통학시간은 규칙 기반 추정치로 계산합니다.';
@@ -1857,7 +1858,7 @@ function renderHero(d) {
       <div class="cmp-row"><div class="cl">평균 종합 매칭점수</div>
         ${pbar('기존', 'base', c.baseline.avg_composite_score, 100, num(c.baseline.avg_composite_score) + '점')}
         ${pbar('개선', 'ours', c.ours.avg_composite_score, 100, num(c.ours.avg_composite_score) + '점')}</div>
-      <div class="cmp-note">비교 기준: ${esc(c.baseline_label)}<br>${d.transit && d.transit.real_ratio > 0 ? `통학시간: ${d.transit.mode === 'tmap' ? 'TMAP 대중교통 실측' : '지도 좌표 직선거리 추정'} ${num(d.transit.real_ratio)}% (나머지는 규칙 기반 추정)` : '통학시간은 동 단위 규칙 기반 추정치입니다.'}</div>
+      <div class="cmp-note">비교 기준: ${esc(c.baseline_label)}<br>${d.transit && d.transit.real_ratio > 0 ? `통학시간: ${d.transit.mode === 'tmap' ? 'TMAP 대중교통 실측' : '지도 기반 예상 소요시간'} ${num(d.transit.real_ratio)}% (나머지는 규칙 기반 추정)` : '통학시간은 동 단위 규칙 기반 추정치입니다.'}</div>
     </div></div>`;
 }
 function renderKpis(d) {
@@ -1992,7 +1993,7 @@ function drawMap(el, s, h, hname) {
   MAPS.push(m); setTimeout(() => m.invalidateSize(), 60);
   return m;
 }
-function mapNote(s, h) { return `거주지에서 병원까지 직선거리 약 ${num(kmBetween(s, h))}km (동 기준 대략적인 위치)`; }
+function mapNote(s, h) { return `거주지에서 병원까지 약 ${num(kmBetween(s, h))}km (동 기준 대략적인 위치)`; }
 function toggleAlt(el, i, k) {
   const r = DATA.results[i], a = r.alternatives[k], box = el.nextElementSibling;
   if (box.classList.contains('open')) {
@@ -2024,7 +2025,7 @@ function openDetail(i) {
       <div class="eq"><span><i class="dot" style="background:var(--teal)"></i>통학 점수 ${num(r.dist_score)} × ${w.distance}%</span><b>${num(dc)}</b>
         <span><i class="dot" style="background:var(--amber)"></i>지망 점수 ${num(r.pref_score)} (${esc(r.preference_status)}) × ${w.preference}%</span><b>${num(pc)}</b>
         <span><b style="text-align:left">종합 매칭점수</b></span><b>${esc(r.composite_score)}</b></div></div>
-    <div class="box"><h4>통학 (${r.transit_source === 'TMAP' ? 'TMAP 대중교통 · 평일 오전 8시 기준' : (r.transit_source === '직선거리' ? '지도 좌표 직선거리 기반 추정' : '규칙 기반 추정')})</h4><div class="eq"><span>소요시간</span><b>${esc(r.travel_time_minutes)}분</b><span>환승</span><b>${esc(r.transfers)}회</b><span>피로지수(MFI)</span><b>${esc(r.fatigue_index)}</b><span>예상 만족도 지수</span><b>${esc(r.satisfaction_index)}</b></div></div>
+    <div class="box"><h4>통학 (${r.transit_source === 'TMAP' ? 'TMAP 대중교통 · 평일 오전 8시 기준' : (r.transit_source === '직선거리' ? '지도 기반 예상 소요시간' : '규칙 기반 추정')})</h4><div class="eq"><span>소요시간</span><b>${esc(r.travel_time_minutes)}분</b><span>환승</span><b>${esc(r.transfers)}회</b><span>피로지수(MFI)</span><b>${esc(r.fatigue_index)}</b><span>예상 만족도 지수</span><b>${esc(r.satisfaction_index)}</b></div></div>
     ${alts ? `<div class="box"><h4>다른 병원 배정 시 (병원을 누르면 지도 표시)</h4>${alts}</div>` : ''}
     ${note ? `<div class="hint" style="margin-top:12px">${note}</div>` : ''}`;
   $('modal').classList.add('open');
@@ -2317,7 +2318,7 @@ LANDING_PAGE = """<!DOCTYPE html>
   <div class="faq">
     <details><summary>학생 명단은 서버에 저장되나요?</summary><p>저장하지 않습니다. 올린 파일은 메모리에서 처리한 뒤 사라지고, 결과는 엑셀로 내려받아 보관합니다.</p></details>
     <details><summary>명단 파일은 어떤 형식이어야 하나요?</summary><p>엑셀(.xlsx) 또는 CSV입니다. 필수 열은 학번, 이름, 성별, GPA, 출생연도이며, 양식 샘플을 내려받아 확인할 수 있습니다.</p></details>
-    <details><summary>통학시간 앞의 '약'은 무슨 뜻인가요?</summary><p>지도 좌표의 직선거리를 바탕으로 추정한 값이라는 뜻입니다. '추정'은 주소 정보가 부족해 규칙으로 계산한 값입니다.</p></details>
+    <details><summary>통학시간 앞의 '약'은 무슨 뜻인가요?</summary><p>지도 위치를 바탕으로 계산한 예상 소요시간이라는 뜻입니다. '추정'은 주소 정보가 부족해 규칙으로 계산한 값입니다.</p></details>
     <details><summary>지도에 표시되는 거주지는 실제 집인가요?</summary><p>아닙니다. 주소가 동 단위까지만 있어서, 동네 기준의 대략적인 위치로 표시합니다.</p></details>
     <details><summary>배정 결과를 그대로 확정하나요?</summary><p>아닙니다. 시스템은 추천안과 근거를 제공하고, 검토와 최종 결정은 교수자가 합니다.</p></details>
     <details><summary>미배정 학생이 나오면 어떻게 하나요?</summary><p>미배정·사유 탭에서 이유(정원 부족, 조건 불일치 등)를 확인하고, 정원이나 조건을 조정해 다시 배정할 수 있습니다.</p></details>
@@ -2338,7 +2339,8 @@ LANDING_PAGE = """<!DOCTYPE html>
 <section id="news" class="alt"><div class="wrap">
   <div class="sec-h"><div class="tag">소식</div><h2>업데이트</h2></div>
   <div class="news"><ul>
-    <li><b>__APP_VERSION__</b><span>프로그램 이름을 "AI기반 간호실습 배치 의사결정 프로그램"으로 바꿨습니다. (현재 버전)</span></li>
+    <li><b>__APP_VERSION__</b><span>통학시간 안내 문구를 "지도 기반 예상 소요시간"으로 정리했습니다. (현재 버전)</span></li>
+    <li><b>v12.0</b><span>프로그램 이름을 "AI기반 간호실습 배치 의사결정 프로그램"으로 바꿨습니다.</span></li>
     <li><b>v11</b><span>소개 페이지를 홈페이지 형태로 개편했습니다.</span></li>
     <li><b>v10</b><span>학생 상세 화면에 거주지와 병원 위치 지도를 추가하고, 결과 표에 정렬과 페이지 나누기를 넣었습니다.</span></li>
     <li><b>v10</b><span>화면에서 이름과 학번의 일부를 가리도록 했습니다.</span></li>
