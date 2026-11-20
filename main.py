@@ -2,6 +2,7 @@
 AI기반 간호실습 배치 의사결정 프로그램
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v14.0 소개 페이지를 design-taste-frontend 기준으로 새로 제작(화면 단위 구성, 실제 프로그램 화면, 무작위 배정 비교, 팀 캐릭터, 질문 펼침). 배정 도구 화면·계산은 그대로
   v13.8 v13.3 디자인 기준으로 다듬기 — v13.4~13.7 화면은 사용하지 않음 (제목 위 꼬리표 제거, 예시 표 점수순, 장점 목록형, 숫자 효과·안내 문구 정리, 선택·초점·버튼 반응)
   v13.7 접근성 점검 반영(안내문·초록 글자 대비, 제목 순서, 낡은 버튼 규칙 정리) — 화면 모양은 그대로
   v13.6 v13.4 화면(글래스모피즘·새 색·이동 동작·주아체)으로 복원
@@ -78,7 +79,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response, Streami
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v13.8"
+APP_VERSION = "v14.0"
 app = FastAPI(title=f"AI기반 간호실습 배치 의사결정 프로그램 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -2067,341 +2068,492 @@ async function exportXlsx() {
 
 
 LANDING_PAGE = """<!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-type="software" data-radius="soft" data-buttons="tonal">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI기반 간호실습 배치 의사결정 프로그램 | 로켓단</title>
-<meta name="description" content="통학 거리와 학생 희망을 함께 계산해 간호학과 실습 병원 배정안을 추천합니다. 최종 결정은 교수자가 하고, 시스템은 근거를 설명합니다.">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="page-type" content="software">
+<meta name="site-kind" content="software">
+<title>간호학과 실습 병원 배정 프로그램 | 로켓단</title>
+<meta name="description" content="간호학과 학생 명단을 올리면 통학시간과 희망 병원을 함께 계산해 병원 정원 안에서 실습 배정안을 추천합니다. 최종 결정은 교수자가 합니다.">
 <link rel="canonical" href="__BASE__/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="AI기반 간호실습 배치 의사결정 프로그램 | 로켓단">
-<meta property="og:description" content="통학 거리와 학생 희망을 함께 계산해 실습 병원 배정안을 추천합니다.">
+<meta property="og:title" content="간호학과 실습 병원 배정 프로그램 | 로켓단">
+<meta property="og:description" content="통학시간과 희망 병원을 함께 계산해 실습 병원 배정안을 추천합니다.">
 <meta property="og:url" content="__BASE__/">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"AI기반 간호실습 배치 의사결정 프로그램 (로켓단)","url":"__BASE__/","applicationCategory":"EducationalApplication","inLanguage":"ko","description":"통학 거리와 학생 희망을 함께 계산해 간호학과 실습 병원 배정안을 추천하는 웹 서비스"}</script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" onload="this.media='all'">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"AI기반 간호실습 배치 의사결정 프로그램 (로켓단)","url":"__BASE__/","applicationCategory":"EducationalApplication","inLanguage":"ko","description":"통학시간과 희망 병원을 함께 계산해 간호학과 실습 병원 배정안을 추천하는 웹 서비스"}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reddit+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
 <style>
-  :root { --navy:#0f172a; --blue:#1e3a8a; --teal:#0d9488; --teal-d:#0f766e; --teal-l:#ccfbf1; --muted:#475569; --line:#e2e8f0; --bg:#f5f8fc; }
-  * { box-sizing:border-box; }
-  ::selection { background:var(--teal-l); color:#134e4a; }
-  :focus-visible { outline:2px solid var(--teal-d); outline-offset:3px; border-radius:4px; }
-  html { scrollbar-color:#b6c4d6 transparent; accent-color:var(--teal-d); }
-  .stat .big, .mk-kpi b, .mk-tbl td, .dr .sc, .score .row b, .fact b { font-variant-numeric:tabular-nums; }
-  a { text-underline-offset:3px; }
-  html { scroll-behavior:smooth; scroll-padding-top:70px; }
-  body { margin:0; font-family:'Pretendard',-apple-system,'Noto Sans KR','Malgun Gothic',sans-serif; color:var(--navy); background:#fff; line-height:1.65; }
-  body { word-break:keep-all; overflow-wrap:break-word; }
-  h1, h2, h3, p, li { text-wrap:balance; }
-  .wrap { max-width:1100px; margin:0 auto; padding:0 22px; }
-  .notice { background:#f0fdfa; border-bottom:1px solid #d5f3ee; font-size:13px; color:var(--teal-d); text-align:center; padding:8px 12px; }
-  header.top { position:sticky; top:0; background:rgba(255,255,255,.95); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); z-index:5; }
-  .top-in { display:flex; align-items:center; justify-content:space-between; height:64px; gap:20px; }
-  .logo { font-weight:900; font-size:21px; letter-spacing:-.5px; color:var(--blue); text-decoration:none; }
-  .nav { display:flex; gap:28px; align-items:center; font-size:15px; font-weight:600; }
-  .nav a { color:var(--muted); text-decoration:none; }
-  .nav a:hover { color:var(--navy); }
-  .btn { display:inline-block; background:var(--teal-d); color:#fff !important; padding:13px 24px; border-radius:10px; font-weight:700; text-decoration:none; font-size:15px; }
-  .btn { transition:background .15s, transform .15s, box-shadow .15s; }
-  .btn:hover { background:#0b5f58; transform:translateY(-1px); box-shadow:0 6px 14px rgba(15,23,42,.16); }
-  .btn:active { transform:translateY(0); box-shadow:none; }
-  .hero .fact { font-size:15px; color:var(--navy); margin:-14px auto 30px; } .hero .fact b { color:var(--teal-d); }
-  @media (prefers-reduced-motion:reduce) { * { transition:none !important; scroll-behavior:auto !important; } }
-  .btn.sm { padding:9px 18px; font-size:14px; }
-  .btn.ghost { background:#fff; color:var(--navy) !important; border:1.5px solid var(--line); }
-  .btn.ghost:hover { background:#f8fafc; border-color:#94a3b8; box-shadow:none; }
-  .hero { background:linear-gradient(135deg,#e6faf6 0,#eef4ff 100%); padding:96px 0 84px; text-align:center; }
-  .hero h1 { font-size:46px; line-height:1.25; letter-spacing:-1.3px; margin:0 0 18px; }
-  .hero p { font-size:18px; color:var(--muted); max-width:820px; margin:0 auto 32px; }
-  .hero .cta { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
-  section { padding:72px 0; }
-  section.alt { background:var(--bg); }
-  .sec-h { text-align:center; margin-bottom:38px; }
-  h2 { font-size:30px; letter-spacing:-.7px; margin:0 0 10px; }
-  .sec-h p { color:var(--muted); margin:0 auto; max-width:760px; }
-  .grid { display:grid; gap:16px; }
-  .g4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
-  .g3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
-  .g2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .why { display:grid; grid-template-columns:1fr 1.25fr; gap:56px; align-items:start; }
-  .why-h h2 { font-size:34px; line-height:1.3; }
-  .why-h p { color:var(--muted); font-size:17px; margin:0; }
-  .why-l { margin:0; border-top:2px solid var(--navy); }
-  .why-l div { display:grid; grid-template-columns:120px 1fr; gap:16px; padding:20px 0; border-bottom:1px solid var(--line); }
-  .why-l dt { font-weight:800; color:var(--teal-d); font-size:16px; }
-  .why-l dd { margin:0; color:#334155; font-size:16px; }
-  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:24px; }
-  .card h3 { margin:0 0 8px; font-size:17px; }
-  .card p { margin:0; color:var(--muted); font-size:15px; }
-  .ico { width:40px; height:40px; border-radius:10px; background:var(--teal-l); color:var(--teal-d); font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:14px; }
-  .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
-  .stat { text-align:center; background:#fff; border:1px solid var(--line); border-radius:14px; padding:28px 14px; }
-  .stat .big { font-size:36px; font-weight:900; color:var(--teal-d); letter-spacing:-1px; }
-  .stat .big small { font-size:16px; color:var(--muted); font-weight:700; }
-  .stat .from { color:var(--muted); font-size:13px; min-height:20px; }
-  .stat .t { font-weight:700; margin-top:6px; font-size:15px; }
-  .stat .gain { display:inline-block; margin-top:10px; font-size:13px; font-weight:800; color:var(--teal-d); background:#ccfbf1; padding:3px 10px; border-radius:99px; }
-  .note { font-size:13px; color:var(--muted); margin-top:16px; text-align:center; }
-  .svc { display:grid; grid-template-columns:1.1fr 1fr; gap:28px; align-items:center; background:#fff; border:1px solid var(--line); border-radius:18px; padding:32px; }
-  .svc h3 { font-size:24px; margin:0 0 10px; }
-  .svc p { color:var(--muted); margin:0 0 16px; }
-  .svc ul { margin:0 0 22px; padding-left:18px; color:var(--muted); font-size:15px; }
-  .svc li { margin:4px 0; }
-  .score { background:var(--bg); border-radius:14px; padding:22px; }
-  .score .bar { display:flex; height:16px; border-radius:8px; overflow:hidden; background:#e2e8f0; margin:12px 0; }
-  .score .row { display:flex; justify-content:space-between; font-size:14px; padding:4px 0; }
-  .news { background:#fff; border:1px solid var(--line); border-radius:14px; }
-  .news li { list-style:none; display:flex; gap:16px; padding:15px 22px; border-bottom:1px solid var(--line); font-size:15px; }
-  .news li:last-child { border-bottom:none; }
-  .news ul { margin:0; padding:0; }
-  .news b { color:var(--teal-d); min-width:50px; }
-  .final { background:var(--navy); color:#fff; border-radius:18px; padding:48px 34px; text-align:center; }
-  .final h2 { color:#fff; }
-  .final p { color:#cbd5e1; margin:0 auto 24px; max-width:620px; }
-  footer { padding:34px 0 50px; color:var(--muted); font-size:13px; border-top:1px solid var(--line); }
-  footer .links { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:8px; }
-  footer a { color:var(--muted); }
-  .mock { max-width:880px; margin:48px auto 0; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 24px 60px rgba(15,23,42,.14); overflow:hidden; text-align:left; }
-  .mock-bar { display:flex; align-items:center; gap:7px; padding:11px 14px; background:#f1f5f9; border-bottom:1px solid var(--line); font-size:12px; color:var(--muted); }
-  .mock-bar { justify-content:space-between; font-size:13px; } .mock-bar b { color:var(--navy); }
-  .mock-body { padding:20px; }
-  .mk-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
-  .mk-kpi { border:1px solid var(--line); border-radius:10px; padding:10px 14px; background:#f8fafc; }
-  .mk-kpi small { display:block; color:var(--muted); font-size:12px; }
-  .mk-kpi b { font-size:22px; letter-spacing:-.5px; }
-  .mk-tbl { width:100%; border-collapse:collapse; font-size:13px; }
-  .mk-tbl th { background:#f8fafc; color:#475569; font-size:12px; padding:9px 8px; text-align:center; border-bottom:1px solid var(--line); white-space:nowrap; }
-  .mk-tbl td { padding:10px 8px; text-align:center; border-bottom:1px solid #f1f5f9; white-space:nowrap; }
-  .mk-tbl td.l, .mk-tbl th.l { text-align:left; }
-  .mk-tbl .rk { background:#fef3c7; color:#92400e; font-weight:700; font-size:12px; padding:2px 8px; border-radius:99px; }
-  .mk-tbl .hit { background:#ccfbf1; color:#115e59; font-weight:700; font-size:12px; padding:2px 8px; border-radius:99px; }
-  .mk-tbl .miss { background:#f1f5f9; color:#475569; font-weight:700; font-size:12px; padding:2px 8px; border-radius:99px; }
-  .mk-tbl .sc { color:var(--blue); font-weight:800; }
-  .mock-cap { font-size:12px; color:var(--muted); padding:0 20px 14px; }
-  .cmp { width:100%; border-collapse:separate; border-spacing:0; background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; }
-  .cmp th, .cmp td { padding:16px 20px; text-align:left; font-size:15px; border-bottom:1px solid var(--line); vertical-align:top; }
-  .cmp tr:last-child td { border-bottom:none; }
-  .cmp thead th { background:#f8fafc; font-size:14px; }
-  .cmp thead th.us { background:var(--teal-d); color:#fff; }
-  .cmp td:first-child { font-weight:700; width:22%; }
-  .cmp td.old { color:var(--muted); }
-  .cmp td.new { background:#f0fdfa; color:var(--navy); }
-  .demo { display:grid; grid-template-columns:1fr 1.2fr; gap:28px; background:#fff; border:1px solid var(--line); border-radius:18px; padding:30px; align-items:start; }
-  .demo h3 { font-size:20px; margin:0 0 8px; }
-  .demo p { color:var(--muted); margin:0 0 18px; font-size:15px; }
-  .demo .wl { display:flex; justify-content:space-between; font-size:14px; font-weight:700; margin-bottom:8px; }
-  .demo input[type=range] { width:100%; accent-color:var(--teal-d); }
-  .demo .hint { font-size:12px; color:var(--muted); margin-top:10px; }
-  .dr { display:grid; grid-template-columns:1fr auto; gap:4px 10px; padding:11px 12px; border-radius:10px; border:1px solid var(--line); margin-bottom:8px; background:#fff; transition:background .2s, border-color .2s; }
-  .dr.top { background:#f0fdfa; border-color:var(--teal); }
-  .dr .nm { font-weight:700; font-size:15px; }
-  .dr .nm em { font-style:normal; font-size:11px; background:var(--teal-d); color:#fff; padding:1px 7px; border-radius:99px; margin-left:6px; vertical-align:middle; }
-  .dr .sub { font-size:12px; color:var(--muted); }
-  .dr .sc { font-weight:800; font-size:17px; color:var(--blue); text-align:right; }
-  .dr .tr { grid-column:1 / 3; height:7px; border-radius:4px; background:#e2e8f0; overflow:hidden; }
-  .dr .tr i { display:block; height:100%; background:var(--teal); transition:width .25s; }
-  .faq { max-width:780px; margin:0 auto; }
-  .faq details { background:#fff; border:1px solid var(--line); border-radius:12px; margin-bottom:10px; }
-  .faq summary { cursor:pointer; padding:16px 20px; font-weight:700; font-size:16px; list-style:none; }
-  .faq summary::-webkit-details-marker { display:none; }
-  .faq summary { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-  .faq summary::after { content:''; flex:none; width:12px; height:12px; background:linear-gradient(var(--muted),var(--muted)) center/12px 2px no-repeat, linear-gradient(var(--muted),var(--muted)) center/2px 12px no-repeat; transition:transform .2s; }
-  .faq details[open] summary::after { transform:rotate(45deg); }
-  .faq p { margin:0; padding:0 20px 18px; color:var(--muted); font-size:15px; }
-  .dots { position:fixed; right:18px; top:50%; transform:translateY(-50%); z-index:4; display:none; flex-direction:column; gap:4px; }
-  .dots a { position:relative; display:block; width:26px; height:22px; }
-  .dots a::before { content:''; position:absolute; right:8px; top:7px; width:8px; height:8px; border-radius:50%; background:#cbd5e1; transition:all .2s; }
-  .dots a:hover::before { background:var(--teal); }
-  .dots a.on::before { background:var(--teal-d); width:10px; height:10px; right:7px; top:6px;  }
-  .dots a span { position:absolute; right:30px; top:1px; white-space:nowrap; background:var(--navy); color:#fff; font-size:12px; font-weight:600; padding:3px 10px; border-radius:6px; opacity:0; pointer-events:none; transition:opacity .15s; }
-  .dots a:hover span, .dots a:focus-visible span { opacity:1; }
-  .dots kbd { font:700 11px/1 inherit; background:rgba(255,255,255,.22); border-radius:4px; padding:2px 6px; margin-left:8px; }
-  .team { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
-  .mem { text-align:center; padding:26px 10px 20px; border:1px solid var(--line); border-radius:14px; background:#fff; }
-  .mem img { height:120px; image-rendering:pixelated; image-rendering:crisp-edges; }
-  .mem b { display:block; margin-top:12px; font-size:16px; }
-  .mem span { font-size:13.5px; color:var(--muted); }
-  @media (max-width:860px) { .team { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-  .logo-wrap { display:flex; align-items:center; gap:10px; }
-  .ver { font-size:12px; font-weight:700; color:var(--teal-d); background:var(--teal-l); padding:2px 8px; border-radius:99px; }
-  .foot { display:grid; grid-template-columns:1.3fr 1fr auto; gap:24px; align-items:start; }
-  .foot span { display:block; } .foot b { display:block; color:var(--navy); font-size:15px; margin-bottom:2px; }
-  .pname { font-size:13px; color:var(--muted); font-weight:600; }
-  @media (max-width:860px) { .pname { display:none; } .foot { grid-template-columns:1fr; } .why { grid-template-columns:1fr; gap:24px; } .why-l div { grid-template-columns:96px 1fr; } }
-  @media (min-width:1100px) { .dots { display:flex; } }
-  /* 구역마다 화면 한 장(헤더 아래 전체 높이)에 맞춤 */
-  html { scroll-snap-type:y proximity; }
-  main > section, main > .hero, main > section.fin { min-height:calc(100vh - 70px); min-height:calc(100svh - 70px); display:flex; flex-direction:column; justify-content:center; scroll-snap-align:start; }
-  main > section > .wrap, main > .hero > .wrap { width:100%; }
-  main > .hero { padding-top:40px; padding-bottom:40px; }
-  main > section { padding-top:40px; padding-bottom:40px; }
-  @media (max-width:860px) {
-    .demo { grid-template-columns:1fr; }
-    .g4, .stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
-    .svc { grid-template-columns:1fr; }
-  }
-  @media (max-width:640px) {
-    .mk-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; } .mk-kpi { padding:8px 10px; } .mk-kpi b { font-size:17px; } .mk-kpi small { font-size:11px; } .mock-body { padding:12px; overflow-x:auto; } .mk-tbl { font-size:12px; } .mk-tbl .mh, .mk-tbl th:nth-child(3), .mk-tbl td:nth-child(3) { display:none; } .mk-tbl td, .mk-tbl th { padding:8px 4px; } .cmp th, .cmp td { padding:12px; font-size:14px; }
-    .hero { padding:56px 0 48px; } .hero h1 { font-size:31px; } .hero p { font-size:16px; }
-    .g3, .g2, .g4 { grid-template-columns:1fr; } .nav a.hide { display:none; } section { padding:48px 0; }
-    .nav { gap:14px; } h2 { font-size:25px; } .stat .big { font-size:30px; }
-  }
+/* deal: palette cool-white-slate, type reddit (+ Pretendard for Hangul), hero centred, nav-centre,
+   footer-statement, close-word, rhythm dark-band, buttons tonal, mark initial, radius soft */
+:root{
+  --bg:#f7f9fa; --surface:#ecf0f2; --ink:#1f3038; --muted:#5d6b72; --accent:#0d7480; --accent-ink:#fff;
+  --accent-d:#0a5d67; --accent-l:#dcedef; --dark:#13232a; --dark-2:#1b2f37; --dark-ink:#eef4f6; --dark-muted:#a9bbc2;
+  --line:rgba(31,48,56,.13); --text:rgba(31,48,56,.86);
+  --font:'Reddit Sans','Pretendard',-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --nav:72px; --padt:120px; --padb:72px; --gut:80px; --hgap:48px; --hpadb:64px; --bar:0px;
+  --r-lg:20px; --r-md:12px; --r-sm:8px; --r-btn:10px; --btn-h:44px;
+  --t-h1:72px; --t-h2:48px; --t-h3:28px; --t-lead:20px; --t-card:20px; --t-body:16px; --t-small:14px; --t-label:13px; --t-stat:38px;
+  --m-in:140ms; --m-out:200ms; --m-press:90ms; --m-image:600ms; --m-ease:cubic-bezier(.2,.8,.2,1);
+}
+@media (max-width:639px){ :root{ --nav:56px; --padt:96px; --padb:48px; --gut:24px; --hgap:40px; --hpadb:24px;
+  --t-h1:38px; --t-h2:30px; --t-h3:24px; --t-lead:18px; --t-card:18px; --t-stat:28px; --r-lg:18px; } }
+@media (min-width:640px) and (max-width:1023px){ :root{ --gut:48px; --t-h1:56px; --t-h2:40px; } }
+
+*{box-sizing:border-box} html,body{margin:0}
+html{scroll-padding-top:0;scroll-behavior:auto;accent-color:var(--accent);scrollbar-color:#b7c5cb transparent}
+body{font-family:var(--font);font-size:var(--t-body);line-height:1.625;color:var(--ink);background:var(--bg);word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased}
+::selection{background:var(--accent-l);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;transition:outline-offset var(--m-out) var(--m-ease)}
+h1,h2,h3,p{margin:0} h1,h2{text-wrap:balance}
+.num,.tab{font-variant-numeric:tabular-nums}
+.wrap{width:min(100% - 2 * var(--gut),1280px);margin:0 auto;position:relative;z-index:1}
+.skip{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}
+.skip:focus{width:auto;height:auto;clip-path:none;background:var(--bg);padding:8px 12px;z-index:20}
+
+/* ---------- buttons (tonal) + motion layer ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:var(--btn-h);padding:0 24px;border-radius:var(--r-btn);font:500 16px/1 var(--font);text-decoration:none;border:0;cursor:pointer;white-space:nowrap;
+  transition:transform var(--m-out) var(--m-ease),background-color var(--m-out) var(--m-ease),box-shadow var(--m-out) var(--m-ease)}
+.btn--primary{background:var(--accent);color:var(--accent-ink)}
+.btn--secondary{background:var(--accent-l);color:var(--accent-d)}
+.btn--xl{height:56px;padding:0 32px;font-size:18px}
+@media (hover:hover) and (pointer:fine){
+  .btn:hover{transform:translateY(-1px);transition-duration:var(--m-in)}
+  .btn--primary:hover{background:color-mix(in srgb,var(--accent) 86%,var(--ink))}
+  .btn--secondary:hover{background:color-mix(in srgb,var(--accent-l) 86%,var(--accent))}
+  .btn--xl:hover{transform:translateY(-2px)}
+}
+.btn:active{transform:translateY(1px) scale(.985);transition-duration:var(--m-press)}
+.btn-row{display:flex;gap:12px;flex-wrap:wrap}
+.link{color:var(--accent-d);text-decoration:none;background:linear-gradient(currentColor,currentColor) 0 100%/0 1px no-repeat,linear-gradient(var(--line),var(--line)) 0 100%/100% 1px no-repeat;padding-bottom:2px;transition:background-size var(--m-out) var(--m-ease)}
+.link:hover{background-size:100% 1px,100% 1px;transition-duration:var(--m-in)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- nav (nav-centre) ---------- */
+header.nav{position:fixed;inset:0 0 auto 0;height:var(--nav);background:var(--bg);border-bottom:1px solid var(--line);z-index:10}
+header.nav .wrap{height:100%;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-size:20px;font-weight:500;letter-spacing:-.02em}
+.mark--initial{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-size:15px;font-weight:600}
+.ver{font-size:13px;font-weight:500;color:var(--accent-d);background:var(--accent-l);padding:2px 8px;border-radius:99px}
+.nav__words{display:flex;gap:32px}
+.nav__words a{font-size:15px;font-weight:500;color:var(--muted);text-decoration:none;white-space:nowrap;background:linear-gradient(currentColor,currentColor) 0 calc(100% + 0px)/0 1px no-repeat;padding-bottom:4px;transition:color var(--m-out),background-size var(--m-out) var(--m-ease)}
+.nav__words a:hover{color:var(--ink);background-size:100% 1px;transition-duration:var(--m-in)}
+.nav__act{justify-self:end}
+
+/* ---------- section box ---------- */
+main>section,footer.closing{position:relative;height:calc(var(--h,1) * 100svh);padding:var(--padt) 0 calc(var(--padb) + var(--bar));overflow:hidden}
+@media (max-width:639px){ main>section:not(.hero),footer.closing{height:calc(var(--hm,var(--h,1)) * 100lvh)} }
+@media (max-width:1279px){ .faq .q5{display:none} .panel .x1{display:none} }
+@media (min-width:640px) and (max-width:1023px){ main>section:not(.hero),footer.closing{height:calc(var(--ht,var(--h,1)) * 100svh)} #weights .who{display:none} #weights .frame{padding:16px} #weights .card{padding:24px} .wl{margin-top:20px} .dr{margin-bottom:8px}
+  #steps .cards3{grid-auto-rows:1fr}
+  .split--faq>.faq{grid-column:span 6!important} .split--faq>.frame{grid-column:7 / span 6!important;padding:16px} .sheet .t-hide{display:none} .faq .q5{display:block} #faq .wrap{height:100%;display:flex;flex-direction:column} #faq .split--faq{flex:1;align-items:stretch} }
+.ground-surface{background:var(--surface)}
+.ground-inverse{background:var(--dark);color:var(--dark-ink)}
+.h2{font-size:var(--t-h2);line-height:1.15;font-weight:500;letter-spacing:-.03em}
+.head{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;align-items:start}
+.head .h2{grid-column:span 6}
+.head p{grid-column:7 / span 6;font-size:18px;line-height:1.6;color:var(--text);padding-top:8px}
+.ground-inverse .head p{color:var(--dark-muted)}
+.muted{color:var(--muted)}
+@media (max-width:1023px){ .head{grid-template-columns:1fr;gap:16px} .head .h2,.head p{grid-column:auto} .head p{padding-top:0} }
+
+/* ---------- UI kit (the app's own look) ---------- */
+.ui{--u-bg:#fff;--u-line:#e3e9ec;--u-border:rgba(31,48,56,.14);--u-head:#f3f6f7;background:var(--u-bg);border:1px solid var(--u-border);border-radius:16px;box-shadow:0 18px 48px -12px rgba(19,35,42,.18);overflow:hidden;font-size:14px;color:var(--ink)}
+.ui-bar{display:flex;align-items:center;gap:12px;height:48px;padding:0 20px;border-bottom:1px solid var(--u-line);background:var(--u-head);font-size:13px;color:var(--muted)}
+.ui-bar b{color:var(--ink);font-weight:500;font-size:14px}
+.ui-bar .sp{flex:1}
+.ui-tabs{display:flex;gap:4px}
+.ui-tabs span{padding:13px 4px;margin-left:12px}
+.ui-tabs span.on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink);border-radius:0}
+.chip{display:inline-block;font-size:12px;font-weight:500;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.chip--hit{background:#d7f0ea;color:#0b5c4f}
+.chip--two{background:#e2edf8;color:#244e7a}
+.chip--miss{background:#eef1f3;color:#4b5a61}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:20px 20px 0}
+.kpi{border:1px solid var(--u-line);border-radius:10px;padding:12px 16px}
+.kpi small{display:block;font-size:12px;color:var(--muted)}
+.kpi b{display:block;font-size:24px;font-weight:500;letter-spacing:-.02em;margin-top:2px}
+.kpi i{font-style:normal;font-size:12px;color:#0b5c4f}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:12px;font-weight:500;color:#4a585e;text-align:left;padding:10px 12px;border-bottom:1px solid var(--u-line);white-space:nowrap}
+.tbl td{padding:11px 12px;font-size:14px;border-bottom:1px solid #eef2f4;white-space:nowrap}
+.tbl td.r,.tbl th.r{text-align:right}
+.tbl .sc{font-weight:500;color:var(--accent-d)}
+.fade-b{-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent)}
+
+/* ---------- hero (statement followed by the work) ---------- */
+.hero{height:100svh;padding:calc(var(--nav) + var(--hgap)) 0 calc(var(--hpadb) + var(--bar));overflow:hidden;
+  background:linear-gradient(180deg,var(--bg) 0,var(--bg) 45%,#e3eff0 100%)}
+.hero .wrap,.hero-text{height:100%}
+.hero-text{display:flex;flex-direction:column}
+.hero__head{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;align-items:stretch}
+.hero__head>div:first-child{grid-column:span 6}
+.hero__head>div:last-child{grid-column:7 / span 6}
+.notice{font-size:14px;color:var(--text);margin-bottom:16px}
+.notice b{font-weight:500;color:var(--accent-d)}
+.hero h1{font-size:var(--t-h1);line-height:1.08;font-weight:500;letter-spacing:-.035em}
+.hero__lead{padding-top:37px;font-size:var(--t-lead);line-height:1.55;color:var(--text)}
+.hero .btn-row{margin-top:24px}
+.hero__frame{margin-top:48px;flex:1;min-height:0;overflow:hidden;border-radius:16px 16px 0 0;
+  -webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
+.hero__frame .ui{height:100%}
+.ui{text-align:left}
+@media (max-width:1023px){ .hero__head{grid-template-columns:1fr;gap:20px} .hero__head>div{grid-column:auto!important} }
+/* ---------- app frame (section 2) ---------- */
+.app{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);margin-top:48px;flex:1;min-height:0}
+.app__pane{position:relative;min-width:0;min-height:0;overflow:hidden;-webkit-mask-image:linear-gradient(#000 calc(100% - 72px),transparent);mask-image:linear-gradient(#000 calc(100% - 72px),transparent)}
+.app__pane+.app__pane{border-left:1px solid var(--u-line)}
+.app__pane::after{content:"";position:absolute;inset:auto 0 0 0;height:64px;background:linear-gradient(transparent,#fff);pointer-events:none}
+.stu{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 20px;border-bottom:1px solid #eef2f4}
+.stu.on{background:#e6f2f3}
+.stu b{font-weight:500}
+.stu small{grid-column:1;font-size:12px;color:#4a585e}
+.stu .sc{grid-row:1 / 3;grid-column:2;align-self:center;font-weight:500;color:var(--accent-d)}
+.open{padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;align-content:start}
+.open .ttl{margin:0;font-size:18px;font-weight:500;grid-column:1 / -1}
+.open .ttl small{font-size:13px;color:var(--muted);font-weight:400;margin-left:8px}
+.box{border:1px solid var(--u-line);border-radius:12px;padding:14px 16px}
+.box>small{display:block;font-size:12px;color:var(--muted);margin-bottom:8px}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#e9eef0;margin:6px 0 10px}
+.bar i{display:block;height:100%}
+.row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+.row b{font-weight:500}
+.map{grid-column:1 / -1;height:180px;border-radius:12px;position:relative;overflow:hidden;
+  background:#eef3ef}
+.map .road{position:absolute;background:#fff;border:1px solid #dfe6e2}
+.map .park{position:absolute;background:#dbe9dc;border-radius:8px}
+.map .pin{position:absolute;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;background:#fff;border:1px solid var(--u-line);border-radius:99px;padding:3px 10px 3px 4px;box-shadow:0 2px 6px rgba(19,35,42,.12)}
+.map .pin i{width:14px;height:14px;border-radius:50%;display:block}
+.map svg{position:absolute;inset:0}
+.alts .row{padding:6px 0;border-bottom:1px solid #eef2f4}
+.alts .row:last-child{border:0}
+
+/* ---------- weights (split) ---------- */
+.split{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;margin-top:48px;align-items:stretch}
+.split>.card{grid-column:span 6}
+.split>.frame{grid-column:7 / span 6}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:32px}
+.card h3{font-size:var(--t-card);font-weight:500;line-height:1.35}
+.card p{margin-top:8px;color:var(--text)}
+.who{display:flex;align-items:center;gap:16px;margin-top:24px}
+.who img{height:72px;image-rendering:pixelated}
+.who p{margin:0;font-size:15px}
+.wl{display:flex;justify-content:space-between;font-size:14px;font-weight:500;margin:32px 0 10px}
+input[type=range]{width:100%;height:28px;margin:0}
+.frame{border-radius:var(--r-lg);padding:24px;background:linear-gradient(160deg,#d9ecee,#eef4f1 60%,#e7eef3)}
+.dr{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:14px 16px;border-radius:12px;background:#fff;border:1px solid var(--u-line);margin-bottom:10px;transition:border-color .2s,box-shadow .2s}
+.dr:last-child{margin-bottom:0}
+.dr.top{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.dr .nm{font-weight:500}
+.dr .nm em{font-style:normal;font-size:12px;background:var(--accent);color:#fff;padding:1px 8px;border-radius:99px;margin-left:8px}
+.dr .sub{font-size:13px;color:var(--muted)}
+.dr .sc{font-weight:500;font-size:18px;color:var(--accent-d);text-align:right;grid-row:1 / 3;grid-column:2;align-self:center}
+.dr .tr{grid-column:1 / 3;height:6px;border-radius:3px;background:#e7edef;overflow:hidden}
+.dr .tr i{display:block;height:100%;background:var(--accent);transition:width .25s var(--m-ease)}
+
+/* ---------- results (dark band) ---------- */
+.res{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;margin-top:48px}
+.res .chart{grid-column:span 6;background:var(--dark-2);border:1px solid rgba(238,244,246,.08);border-radius:var(--r-lg);padding:32px}
+.res .side{grid-column:7 / span 6;display:flex;flex-direction:column;gap:24px}
+.cmp{display:grid;grid-template-columns:150px 1fr 88px;gap:10px 20px;align-items:center;padding:18px 0;border-bottom:1px solid rgba(238,244,246,.1)}
+.cmp:first-child{padding-top:0} .cmp:last-child{border:0;padding-bottom:0}
+.cmp>b{font-weight:500;grid-row:1 / 3}
+.cmp .ln{height:12px;border-radius:6px;background:#3d5560}
+.cmp .ln.us{background:#5fc2c9}
+.cmp span{font-size:15px;text-align:right;color:var(--dark-muted)}
+.cmp span.us{color:var(--dark-ink);font-weight:500}
+.legend{display:flex;gap:20px;font-size:13px;color:var(--dark-muted);margin-bottom:24px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:0}
+.big{background:var(--dark-2);border:1px solid rgba(238,244,246,.08);border-radius:var(--r-lg);padding:28px 32px;flex:1;display:flex;flex-direction:column;justify-content:center}
+.big b{display:block;font-size:var(--t-stat);font-weight:500;letter-spacing:-.02em;color:#fff}
+.big p{color:var(--dark-muted);margin-top:4px}
+.fn{margin-top:24px;font-size:13px;color:var(--dark-muted)}
+
+/* ---------- steps ---------- */
+.cards3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:48px;flex:1;min-height:0;grid-template-rows:minmax(0,1fr)}
+.cards3 .card{display:flex;flex-direction:column;padding:32px 32px 0;overflow:hidden;min-height:0}
+.step{font-size:14px;font-weight:500;color:var(--accent-d)}
+.cards3 h3{margin-top:8px}
+.panel{margin-top:32px;flex:1;min-height:0;overflow:hidden;-webkit-mask-image:linear-gradient(#000 calc(100% - 72px),transparent);mask-image:linear-gradient(#000 calc(100% - 72px),transparent);border-radius:12px 12px 0 0;background:linear-gradient(160deg,#d9ecee,#eef4f1 70%);padding:20px 20px 0;display:flex;align-items:flex-start}
+.panel .ui{max-height:100%;width:100%;border-radius:10px 10px 0 0;border-bottom:0;box-shadow:0 10px 30px -10px rgba(19,35,42,.22)}
+.f-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #eef2f4;font-size:13px}
+.f-row>span:first-child{color:#4a585e}
+.f-sel{border:1px solid var(--u-line);border-radius:8px;padding:4px 10px;font-weight:500;color:var(--ink)}
+.drop{margin:14px;border:1.5px dashed #b9c8ce;border-radius:10px;padding:18px;text-align:center;font-size:13px;color:var(--muted)}
+.file{display:flex;align-items:center;gap:10px;margin:0 14px 14px;padding:10px 12px;border:1px solid var(--u-line);border-radius:10px;font-size:13px}
+.xl{width:28px;height:32px;border-radius:4px;background:#107c41;color:#fff;font-size:11px;font-weight:600;display:grid;place-items:center}
+.file b{font-weight:500}
+.file small{display:block;color:var(--muted);font-size:12px}
+.ok{margin-left:auto;color:#0b5c4f;font-size:12px;font-weight:500}
+.dl{display:flex;justify-content:flex-end;padding:12px 14px}
+.dl span{background:var(--accent);color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:500}
+
+/* ---------- team ---------- */
+#team .wrap,#steps .wrap,#app-view .wrap{height:100%;display:flex;flex-direction:column}
+.crew{flex:1;min-height:0;margin-top:48px;border-radius:var(--r-lg);background:linear-gradient(180deg,#dcecee 0,#e9f1f0 70%,#d5e2df 70%,#e2ebe8 100%);display:flex;align-items:flex-end;justify-content:center;padding:32px 32px 48px;overflow:hidden}
+.crew img{height:100%;max-height:360px;max-width:100%;object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+/* ---------- faq (open) ---------- */
+.faq{display:flex;flex-direction:column}
+.faq div{padding:22px 0;border-top:1px solid var(--line)}
+.split--faq{align-items:start} .split--faq>.faq{grid-column:span 6}
+.frame--sheet{padding:32px}
+.sheet td,.sheet th{padding:10px 10px;font-size:13px}
+.faq h3{font-size:18px;font-weight:500;line-height:1.4}
+.faq p{margin-top:8px;color:var(--text)}
+
+/* ---------- footer.closing (close-word + footer-statement) ---------- */
+footer.closing{--h:1;background:var(--surface)}
+footer.closing .wrap{height:100%;display:grid;grid-template-rows:1fr auto}
+.close{display:flex;flex-direction:column}
+.close__head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px}
+.close__head p{margin-top:12px;font-size:18px;color:var(--text)}
+.close__name{margin-top:auto;font-size:clamp(96px,17vw,260px);line-height:.9;font-weight:500;letter-spacing:-.05em;color:var(--ink);padding-bottom:40px}
+.dir{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;padding-top:32px;border-top:1px solid var(--line);font-size:15px}
+.dir>div{grid-column:span 4}
+.dir>div:nth-child(3){grid-column:9 / span 4}
+.dir b{display:block;font-weight:500;margin-bottom:6px}
+.dir span{display:block;color:var(--text)}
+.dir a{color:var(--ink)}
+.legal{grid-column:1 / -1;font-size:13px;color:var(--muted);padding-top:16px;text-align:left!important}
+
+/* ---------- 1024–1279 / tablet / phone ---------- */
+@media (min-width:1024px) and (max-width:1279px){ .stu:nth-child(n+7){display:none} #app-view .map{height:120px} .open{gap:12px 16px;padding:16px 20px} #weights .who{display:none} .wl{margin-top:24px} .dr{padding:10px 14px;margin-bottom:8px} #weights .card{padding:24px} .cmp{padding:12px 0} .res .chart{padding:24px} .faq div:nth-child(4),.faq .q5{display:none} .faq div{padding:16px 0} }
+@media (max-width:1279px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .kpis .kpi:nth-child(n+3){display:none} }
+@media (max-width:1023px){
+  .hero .tbl .r5,.open .r-x{display:none}
+  header.nav .wrap{grid-template-columns:1fr auto} .nav__words{display:none}
+  .app{grid-template-columns:1fr;grid-template-rows:252px minmax(0,1fr)} .app__pane+.app__pane{border-left:0;border-top:1px solid var(--u-line)}
+  .open{grid-template-columns:1fr} .map{height:150px}
+  .split>.card,.split>.frame{grid-column:1 / -1}
+  .res .chart,.res .side{grid-column:1 / -1} .res .side{flex-direction:row} .big{flex:1}
+  .cards3{grid-template-columns:1fr} .panel{min-height:200px}
+ 
+ 
+  .dir>div,.dir>div:nth-child(3){grid-column:1 / -1}
+}
+@media (max-width:639px){
+  .ver{display:none}
+  .panel .x2{display:none} #steps .panel{flex:none;min-height:0;-webkit-mask-image:none;mask-image:none;border-radius:12px;padding-bottom:20px} #steps .panel .ui{border-radius:10px;border-bottom:1px solid var(--u-border)} #steps .card{padding-bottom:24px}
+  #results .head p{display:none} .sheet .t-hide{display:none} .hero .ui-bar>span:nth-of-type(1){display:none} .res .side{order:-1} .frame--sheet{padding:12px!important} .frame--sheet .ui-bar span:last-child{display:none}
+  .faq .q5{display:block} .faq div{padding:14px 0} .faq h3{font-size:17px}
+  #weights .head p,#weights .who,#weights .card p{display:none} #weights .wl{margin-top:16px} #weights .frame{padding:12px} #weights .dr{padding:10px 12px;margin-bottom:6px}
+  #app-view .app{grid-template-rows:170px minmax(0,1fr)} #app-view .map{height:110px} #app-view .alts{display:none}
+  .hero h1{line-height:1.15}
+  .hero .btn-row{flex-direction:column;width:100%} .hero .btn{width:100%}
+  .hero__frame{margin-top:32px}
+  .tbl .m-hide{display:none} .hero .tbl td,.hero .tbl th{padding:9px 6px;font-size:13px} .hero .tbl .lg{display:none}
+  .kpis{padding:12px 12px 0;gap:8px} .kpi{padding:8px 10px} .kpi b{font-size:18px}
+  .card{padding:24px}
+  .split{margin-top:32px} .cards3,.crew,.res,.app{margin-top:32px}
+  .cmp{grid-template-columns:1fr 64px;gap:6px 12px} .cmp>b{grid-row:auto;grid-column:1 / -1}
+  .res .chart{padding:20px} .legend{margin-bottom:8px} .cmp{padding:10px 0} .res .side{flex-direction:row;gap:12px} .big{padding:0;background:none;border:0} .big p{font-size:14px} .fn{margin-top:16px} #results .head p{font-size:16px}
+  .crew{padding:16px 16px 28px}
+  .close__head{flex-direction:column} .close__head .btn{width:100%}
+  .close__name{font-size:88px;padding-bottom:24px}
+}
 </style>
 </head>
-<body>
-<div class="notice">올린 학생 명단 파일은 서버에 저장되지 않습니다</div>
-<header class="top"><div class="wrap top-in">
-  <div class="logo-wrap"><a class="logo" href="/">로켓단</a><span class="pname">AI기반 간호실습 배치 의사결정 프로그램</span><span class="ver">__APP_VERSION__</span></div>
-  <nav class="nav"><a class="hide" href="#intro">소개</a><a class="hide" href="#steps">순서</a><a class="hide" href="#guide">자주 묻는 질문</a><a class="hide" href="#team">만든 사람들</a><a class="btn sm" href="/app">배정 시스템 열기</a></nav>
+<body id="top">
+<!-- deal: kind software · palette cool-white-slate · type reddit+Pretendard · hero centred · nav-centre · footer-statement · close-word · rhythm dark-band · buttons tonal · mark initial -->
+<header class="nav"><div class="wrap">
+  <a class="skip" href="#app-view">본문으로 건너뛰기</a>
+  <a class="brand" href="#top"><span class="mark mark--initial" aria-hidden="true">로</span>로켓단<span class="ver">__APP_VERSION__</span></a>
+  <nav class="nav__words" aria-label="주요 구역"><a href="#app-view">화면</a><a href="#weights">비중</a><a href="#results">결과</a><a href="#steps">순서</a><a href="#faq">질문</a></nav>
+  <a class="btn btn--primary nav__act" href="/app">배정 시작하기</a>
 </div></header>
 
 <main>
-<nav class="dots" aria-label="구역 이동"><a href="#intro" data-s="intro" title="소개" aria-label="소개"><span>소개<kbd>1</kbd></span></a><a href="#why" data-s="why" title="왜 필요한가" aria-label="왜 필요한가"><span>왜 필요한가<kbd>2</kbd></span></a><a href="#compare" data-s="compare" title="비교" aria-label="비교"><span>비교<kbd>3</kbd></span></a><a href="#numbers" data-s="numbers" title="시험 결과" aria-label="시험 결과"><span>시험 결과<kbd>4</kbd></span></a><a href="#service" data-s="service" title="주요 기능" aria-label="주요 기능"><span>주요 기능<kbd>5</kbd></span></a><a href="#start" data-s="start" title="직접 해보기" aria-label="직접 해보기"><span>직접 해보기<kbd>6</kbd></span></a><a href="#steps" data-s="steps" title="순서" aria-label="순서"><span>순서<kbd>7</kbd></span></a><a href="#guide" data-s="guide" title="자주 묻는 질문" aria-label="자주 묻는 질문"><span>자주 묻는 질문<kbd>8</kbd></span></a><a href="#team" data-s="team" title="만든 사람들" aria-label="만든 사람들"><span>만든 사람들<kbd>9</kbd></span></a></nav>
-<div class="hero" id="intro"><div class="wrap">
-  <h1>간호학과 실습 병원 배정,<br>통학과 희망을 함께 계산합니다</h1>
-  <p>학생 명단을 올리면 병원 정원 안에서 배정안을 추천하고, 학생마다 그 이유를 보여 줍니다. 최종 결정은 교수자가 합니다.</p>
-  <p class="fact">가상 학생 221명 시험에서 평균 통학시간 <b>56.7분 → 35분</b></p>
-  <div class="cta"><a class="btn" href="/app">배정 시스템 열기</a><a class="btn ghost" href="#start">비중 바꿔 보기</a></div>
-  <div class="mock">
-    <div class="mock-bar"><b>배정 결과</b><span>4학년 1학기 관리 실습</span></div>
-    <div class="mock-body">
-      <div class="mk-kpis">
-        <div class="mk-kpi"><small>시험한 학생 수</small><b>221명</b></div>
-        <div class="mk-kpi"><small>평균 통학시간</small><b>35분</b></div>
-        <div class="mk-kpi"><small>지망 충족률</small><b>76%</b></div>
+<section class="hero" style="--h:1;--hm:1"><div class="wrap"><div class="hero-text">
+  <div class="hero__head">
+    <div><p class="notice">가상 학생 221명 시험에서 평균 통학시간 <b class="num">56.7분 → 35분</b></p><h1>간호학과 실습 병원 배정 프로그램</h1></div>
+    <div><p class="hero__lead">학생 명단을 올리면 통학시간과 1~3지망을 함께 계산해, 병원 정원 안에서 배정안을 추천합니다. 최종 결정은 교수자가 합니다.</p>
+    <div class="btn-row"><a class="btn btn--primary" href="/app">배정 시작하기</a><a class="btn btn--secondary" href="#weights">비중 바꿔 보기</a></div></div>
+  </div>
+  <div class="hero__frame" data-visual>
+    <div class="ui" role="img" aria-label="배정 결과 화면: 221명 배정, 평균 통학 35분, 지망 충족률 76%">
+      <div class="ui-bar"><b>배정 결과</b><span>4학년 1학기 관리 실습 · 9개 병원</span><span class="sp"></span><div class="ui-tabs"><span class="on">전체 학생</span><span>병원별</span><span>미배정·사유</span></div></div>
+      <div class="kpis">
+        <div class="kpi"><small>배정 학생</small><b class="num">221명</b><i>미배정 0명</i></div>
+        <div class="kpi"><small>평균 통학시간</small><b class="num">35분</b><i>무작위 대비 −21.7분</i></div>
+        <div class="kpi"><small>지망 충족률</small><b class="num">76%</b><i>무작위 대비 +56.6%p</i></div>
+        <div class="kpi"><small>평균 매칭점수</small><b class="num">75.6점</b><i>무작위 대비 +33.8점</i></div>
       </div>
-      <table class="mk-tbl"><thead><tr><th class="l">배정 병원</th><th class="mh">학번</th><th>이름</th><th>지망</th><th>통학시간</th><th>종합점수</th></tr></thead><tbody>
-        <tr><td class="l">순천향대학교부천병원</td><td class="mh">202○○○15</td><td><b>이○은</b></td><td><span class="hit">1지망</span></td><td><b>약 18분</b></td><td class="sc">97.2</td></tr>
-        <tr><td class="l">고려대학교구로병원</td><td class="mh">202○○○07</td><td><b>김○수</b></td><td><span class="hit">1지망</span></td><td><b>약 24분</b></td><td class="sc">91.6</td></tr>
-        <tr><td class="l">단원병원</td><td class="mh">202○○○31</td><td><b>박○준</b></td><td><span class="hit">2지망</span></td><td><b>약 29분</b></td><td class="sc">77.9</td></tr>
-        <tr><td class="l">아주대학교병원</td><td class="mh">202○○○42</td><td><b>최○린</b></td><td><span class="miss">지망 외</span></td><td><b>약 21분</b></td><td class="sc">67.4</td></tr>
-      </tbody></table>
+      <div style="padding:12px 20px 0">
+      <table class="tbl num"><thead><tr><th>배정 병원</th><th class="m-hide">학번</th><th class="m-hide">이름</th><th>지망</th><th class="r">통학<span class="lg">시간</span></th><th class="r m-hide">환승</th><th class="r"><span class="lg">종합</span>점수</th></tr></thead><tbody>
+        <tr><td>순천향대학교부천병원</td><td class="m-hide">202○○○15</td><td class="m-hide">이○은</td><td><span class="chip chip--hit">1지망</span></td><td class="r">약 18분</td><td class="r m-hide">0회</td><td class="r sc">97.2</td></tr>
+        <tr><td>고려대학교구로병원</td><td class="m-hide">202○○○07</td><td class="m-hide">김○수</td><td><span class="chip chip--hit">1지망</span></td><td class="r">약 24분</td><td class="r m-hide">1회</td><td class="r sc">91.6</td></tr>
+        <tr><td>단원병원</td><td class="m-hide">202○○○31</td><td class="m-hide">박○준</td><td><span class="chip chip--two">2지망</span></td><td class="r">약 29분</td><td class="r m-hide">1회</td><td class="r sc">77.9</td></tr>
+        <tr><td>아주대학교병원</td><td class="m-hide">202○○○42</td><td class="m-hide">최○린</td><td><span class="chip chip--miss">지망 외</span></td><td class="r">약 21분</td><td class="r m-hide">0회</td><td class="r sc">67.4</td></tr>
+        <tr class="r5"><td>시화병원</td><td class="m-hide">202○○○58</td><td class="m-hide">정○우</td><td><span class="chip chip--two">3지망</span></td><td class="r">약 33분</td><td class="r m-hide">1회</td><td class="r sc">64.1</td></tr>
+      </tbody></table></div>
     </div>
   </div>
-</div></div>
+</div></div></section>
 
-<section id="why"><div class="wrap why">
-  <div class="why-h"><h2>배정 업무를 더 합리적으로</h2><p>엑셀로 한 명씩 맞추던 실습 배정을, 이유를 설명할 수 있는 추천안으로 바꿉니다.</p></div>
-  <dl class="why-l">
-    <div><dt>통학 부담</dt><dd>지도 기반 소요시간과 환승·도보를 점수로 바꿔, 멀리 가는 학생이 줄어드는 쪽으로 계산합니다.</dd></div>
-    <div><dt>학생 희망</dt><dd>1~3지망을 점수에 넣고, 통학과 희망의 비중은 슬라이더로 정합니다.</dd></div>
-    <div><dt>배정 근거</dt><dd>학생마다 점수 계산 내역, 다른 병원이었을 때의 점수, 위치 지도를 보여 줍니다.</dd></div>
-    <div><dt>최종 결정</dt><dd>시스템은 추천안만 냅니다. 검토와 확정은 교수자가 합니다.</dd></div>
-  </dl>
-</div></section>
-
-<section id="compare" class="alt"><div class="wrap">
-  <div class="sec-h"><h2>엑셀 수작업과 무엇이 다른가</h2><p>최종 결정은 그대로 교수자가 합니다. 계산과 근거 정리를 시스템이 돕습니다.</p></div>
-  <table class="cmp"><thead><tr><th></th><th>엑셀 수작업</th><th class="us">로켓단</th></tr></thead><tbody>
-    <tr><td>통학 거리</td><td class="old">학생 주소를 보고 사람이 판단</td><td class="new">지도 기반 거리와 소요시간을 자동 계산</td></tr>
-    <tr><td>학생 희망</td><td class="old">1~3지망을 보며 하나씩 조정</td><td class="new">지망을 점수에 반영해 한 번에 계산</td></tr>
-    <tr><td>조건이 바뀔 때</td><td class="old">정원이나 기준이 바뀌면 다시 맞춤</td><td class="new">조건을 바꾸고 다시 계산하면 바로 새 추천안</td></tr>
-    <tr><td>결과 설명</td><td class="old">필요할 때 따로 정리</td><td class="new">학생별 점수 근거와 다른 병원 점수를 자동 제공</td></tr>
-    <tr><td>최종 결정</td><td class="old">교수자</td><td class="new">교수자 (시스템은 추천안만 제공)</td></tr>
-  </tbody></table>
-</div></section>
-
-<section id="numbers"><div class="wrap">
-  <div class="sec-h"><h2>숫자로 보는 로켓단</h2><p>가상 학생 221명과 4학년 1학기 관리 실습 9개 병원으로, 정원만 지킨 무작위 배정 100회 평균과 비교했습니다.</p></div>
-  <div class="stats">
-    <div class="stat"><div class="from">무작위 배정 56.7분</div><div class="big">35<small> 분</small></div><div class="t">평균 통학시간</div><div class="gain">21.7분 단축 (−38%)</div></div>
-    <div class="stat"><div class="from">무작위 배정 19.4%</div><div class="big">76<small> %</small></div><div class="t">지망 충족률</div><div class="gain">+56.6%p</div></div>
-    <div class="stat"><div class="from">무작위 배정 41.8점</div><div class="big">75.6<small> 점</small></div><div class="t">평균 매칭점수</div><div class="gain">+33.8점</div></div>
-    <div class="stat"><div class="from">221명 전원 배정</div><div class="big">0<small> 명</small></div><div class="t">미배정 학생</div><div class="gain">병원 정원 100% 준수</div></div>
-  </div>
-  <div class="note">가상 명단 기준 시뮬레이션 결과이며, 통학시간은 지도 기반 예상값입니다. 실제 학과의 배정 결과와 비교한 값이 아닙니다.</div>
-</div></section>
-
-<section id="service" class="alt"><div class="wrap">
-  <div class="sec-h"><h2>시스템이 계산하고, 교수자가 결정합니다</h2><p>최적화 알고리즘(헝가리안 알고리즘)이 병원 정원 안에서 학생 전체의 점수 합이 가장 높은 조합을 찾습니다.</p></div>
-  <div class="svc">
-    <div>
-      <h3>조건을 정하고 명단을 올리면, 추천안이 나옵니다</h3>
-      <p>병원별 정원을 지키면서 전체 학생의 점수 합이 가장 높은 배정안을 계산합니다.</p>
-      <ul>
-        <li>학년·학기·교과목과 실습 기간(8~10일) 설정</li>
-        <li>병원별 정원 직접 입력</li>
-        <li>성별, GPA, 출생연도, 과거 실습 기관 조건</li>
-        <li>결과 표 정렬·검색, 엑셀 다운로드</li>
-        <li>화면에서 이름·학번 일부 가림</li>
-      </ul>
-      <a class="btn" href="/app">배정 시스템 열기</a>
+<section id="app-view" style="--h:1"><div class="wrap">
+  <div class="head"><h2 class="h2">학생마다 배정 이유를 보여 줍니다</h2><p>학생을 누르면 거주지와 병원 위치, 점수 계산 내역, 다른 병원이었을 때의 점수가 열립니다. 학생에게 설명할 때 이 화면을 그대로 쓰면 됩니다.</p></div>
+  <div class="ui app" data-visual role="img" aria-label="학생 목록과 선택한 학생의 배정 근거 화면">
+    <div class="app__pane app__pane--list">
+      <div class="ui-bar"><b>학생 221명</b><span class="sp"></span><span>점수순</span></div>
+      <div class="stu on"><b>김○수 · 202○○○07</b><span class="sc num">91.6</span><small>고려대학교구로병원 · 1지망 · 약 24분</small></div>
+      <div class="stu"><b>이○은 · 202○○○15</b><span class="sc num">97.2</span><small>순천향대학교부천병원 · 1지망 · 약 18분</small></div>
+      <div class="stu"><b>박○준 · 202○○○31</b><span class="sc num">77.9</span><small>단원병원 · 2지망 · 약 29분</small></div>
+      <div class="stu"><b>최○린 · 202○○○42</b><span class="sc num">67.4</span><small>아주대학교병원 · 지망 외 · 약 21분</small></div>
+      <div class="stu"><b>정○우 · 202○○○58</b><span class="sc num">64.1</span><small>시화병원 · 3지망 · 약 33분</small></div>
+      <div class="stu"><b>한○영 · 202○○○63</b><span class="sc num">88.0</span><small>고려대학교안산병원 · 1지망 · 약 15분</small></div>
+      <div class="stu"><b>윤○호 · 202○○○70</b><span class="sc num">72.5</span><small>서울특별시서남병원 · 2지망 · 약 38분</small></div>
+      <div class="stu"><b>서○아 · 202○○○81</b><span class="sc num">83.3</span><small>한림대학교성심병원 · 1지망 · 약 27분</small></div>
+      <div class="stu"><b>오○민 · 202○○○94</b><span class="sc num">69.8</span><small>단원병원 · 지망 외 · 약 19분</small></div>
     </div>
-    <div class="score">
-      <b>점수는 이렇게 계산합니다</b>
-      <div class="bar"><i style="width:40%;background:#0d9488"></i><i style="width:30%;background:#f59e0b"></i></div>
-      <div class="row"><span>통학 점수 57.3 × 70%</span><b>40.1</b></div>
-      <div class="row"><span>지망 점수 100 (1지망 일치) × 30%</span><b>30.0</b></div>
-      <div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><b>종합 매칭점수</b><b>70.1</b></div>
+    <div class="app__pane app__pane--open">
+      <div class="ui-bar"><b>김○수</b><span>202○○○07</span><span class="sp"></span><span class="chip chip--hit">1지망 배정</span></div>
+      <div class="open">
+        <div class="ttl">고려대학교구로병원<small>종합 매칭점수 91.6점</small></div>
+        <div class="map" aria-hidden="true">
+          <div class="road" style="left:-10px;right:-10px;top:96px;height:14px"></div>
+          <div class="road" style="left:300px;top:-10px;bottom:-10px;width:14px"></div>
+          <div class="road" style="left:-10px;width:260px;top:30px;height:8px"></div><div class="road" style="right:-10px;width:200px;top:146px;height:8px"></div><div class="park" style="left:150px;top:126px;width:120px;height:40px"></div><div class="park" style="right:60px;top:84px;width:90px;height:50px"></div>
+          <svg viewBox="0 0 600 180" preserveAspectRatio="none"><path d="M90 128 C 200 120, 260 60, 470 46" fill="none" stroke="#0d7480" stroke-width="3" stroke-dasharray="7 6"/></svg>
+          <div class="pin" style="left:60px;top:116px"><i style="background:#e0863a"></i>거주지(동 단위)</div>
+          <div class="pin" style="right:24px;top:30px"><i style="background:#0d7480"></i>고려대학교구로병원</div>
+        </div>
+        <div class="box"><small>점수 계산</small>
+          <div class="bar"><i style="width:61.6%;background:#0d7480"></i><i style="width:30%;background:#e0a13a"></i></div>
+          <div class="row"><span>통학 점수 88 × 70%</span><b class="num">61.6</b></div>
+          <div class="row"><span>지망 점수 100 × 30%</span><b class="num">30.0</b></div>
+          <div class="row r-x"><span>약 24분 · 환승 1회 · 도보 6분</span></div>
+        </div>
+        <div class="box alts"><small>다른 병원이었다면</small>
+          <div class="row"><span>고려대학교안산병원</span><b class="num">84.2</b></div>
+          <div class="row"><span>단원병원</span><b class="num">71.0</b></div>
+          <div class="row"><span>시화병원</span><b class="num">58.7</b></div>
+          <div class="row"><span>아주대학교병원</span><b class="num">52.3</b></div>
+        </div>
+      </div>
     </div>
   </div>
-  </div></section>
+</div></section>
 
-<section id="start"><div class="wrap">
-  <div class="sec-h"><h2>먼저 비중을 바꿔 보세요</h2><p>슬라이더를 움직여 보세요. 통학 거리를 중요하게 보면 가까운 병원이, 희망을 중요하게 보면 희망 병원이 올라옵니다.</p></div>
-  <div class="demo">
-    <div>
+<section id="weights" class="ground-surface" style="--h:1"><div class="wrap">
+  <div class="head"><h2 class="h2">통학과 희망의 비중을 직접 정합니다</h2><p>슬라이더를 움직이면 같은 학생의 추천 병원 순서가 바로 바뀝니다. 실제 프로그램도 이 비중으로 전체 학생을 계산합니다.</p></div>
+  <div class="split">
+    <div class="card">
       <h3>예시 학생 한 명</h3>
-      <p>1지망 고려대학교구로병원, 2지망 서울특별시서남병원을 적은 학생입니다.</p>
-      <div class="wl"><span id="dLblP">희망 병원 30%</span><span id="dLblD">통학 거리 70%</span></div>
-      <input type="range" id="dSlider" min="0" max="100" step="5" value="70" aria-label="통학 거리와 희망 병원의 비중">
-      <div class="hint">왼쪽으로 갈수록 희망 병원, 오른쪽으로 갈수록 통학의 비중이 커집니다.</div>
+      <p>1지망 고려대학교구로병원, 2지망 서울특별시서남병원을 적었고 집은 안산에 있습니다.</p>
+      <div class="who"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOgAAAGACAYAAACneS77AAAGlUlEQVR42u3dP2icZRzA8d9bMoQiNoQOEs3QNEoEzRBiOAvdpINTiajFoWTqWEQyOTg4OAlCppIpZNC2wZuKQ+tWaGssQdpKwRoQIp1KSKRIp56rBn3fmCfvvX/u81lf7vLee/fNc/DjeS+bmOpEw/WCJstcgv92xCUAgQICBYECAgUECgIFDmIoWj7nPPJsx7tcoefDI6nvb2YFBQQKCBQECggUBAoIFIj2zUEbPefc3tnOPT46MtruFaDg/dnHnNQKCggUECgIFBAoCBQQKBANnIO6r22OhYWLSY9fWVmKlt/3OLOCAgIFBAoCBQQKAgUECuyR1eD3QXt13u9ZNIcsmjNWvR+06XPUfewXNQcFBAoIFAQKCBQECggUCHPQONQ5Z7T8vrhlX58wB7WCgkABgYJAAYECAgWBAmEOGn7/c6CYgwICBQQKAgUECgJ1CUCgQDTz90EbzZwTKygIFBAoIFAQKCBQECggUECgIFBAoCBQQKCAQEGggEBBoIBAAYGCQAGBgkABgQLhvrh9dPfyZ7nHZ8997vywgoJAAYECAgWBAgIFgQL9lU1Mdao+h17uf5BnO5We3Nxrx0t9/vVfnjT6/Mqesz4fHin8DKd8vvrRmBUUfMUFBAoIFAQKCBQECoT9oNHf/ZA0XtKcc+3qatIff/+D86nnl1lBwVdcQKAgUECggEBBoEDYDxr9nXPOLCzlHt98eDv3+O4P31R6cet+/kX7RfexHzRS5pwzb76a9Pwb9x9F4pzUCgq+4gICBYECAgUECgIFYvDmoBsrF6POc8Qizr/c8y97zpkqdU5qBQVfcQGBgkABgQICBYECAgWBAgIFBAoCBQQKAgUECkQD9oNGzfcrErXer7p5dNZ9cQFfcUGggEABgYJAAYHC4BmqwTlkUeKctMjG5e9yj8+ce7fUF//gy27S499YnI82X59UJ/+8WzDHTHv+1Dln0effCgq+4gICBYECAgUECgIFoqlz0EpVPcd7aXIy9/jxs9MDfX2i4jlp6n7VKJ7zW0HBV1xAoCBQQKCAQEGgQJiD7vXk8e/NfgFzo+1+fSX7+kH+GjP/4XuJf2Gp1DmnFRR8xQUECgIFBAoIFAQKhDnovzjzadfvh0Z7f//TCgoIFBAoCBQQKAjUJQCBAlHPOWivyhe4eXQ2Sv59x1zXv5iPOs+JU61dXS31+RcXP45y93taQQGBgkABgQICBYECAoUwBz10l7rXkh4/PX4sypyzPR2byz1+/vR4/uNvfFXp9b31483c46s3t3KPv/B4Pff4yydOJP39e1u7ucd/vfW9FRQQKCBQECggUBAoIFAgDjAH7bkMceA5Z9Ec8cLYK5We/3LB+RW9vu6V9VLPr2jOOXnqHSsoIFBAoCBQQKAgUECgQBz2ftCi/XypivYDRsPnpMsFl+/C6J2kv7+83Uk6P6yggEBBoIBAAYGCQAGBQrgvbusU/b5k98q3rf59yrJfX9HzD/p+TysoCBQQKAgUECggUBAoEOagMXj7RVOfHysoIFAQKCBQQKAgUECgEOagRL3mpNHy/aRNvy+yFRQECggUECgIFBAoCBQIc9Bw39yo2Zwy9fFPx+YqfX2n3jptBQUECggUBAoIFAQKCBQIc9Bo1Zw0dc45AL/PmVlBAYGCQAGBAgIFgQIChTAHJeo0J019fvedtYICAgWBAgIFBAoCBQQKYQ5K1GtOihUUECggUBAoIFAQKCBQIMxB+Yfp8WMughUUECgIFBAoIFAQKCBQECggUECgIFBAoCBQQKCAQCHavR90+Oe1cs/gxTPeBbCCgkABgYJAAYECAgWBAgIFgQICBQQKAgUECgIFBArEwfeDziwslXoCl7pp+0Hvbe16F7GCAgIFBAoCBQQKAgUECvxdNjHVKftv9KLUOeq1Wl/gn377I//8P/nI6y/5M24FBQQKAgUECggUBAoIFMJ+0KjdHKrnbRpoWVhBAYECAgWBAgIFgQICBQQKAgUECgIFBAoIFAQKCBQECggUECgIFBAoCBQQKCBQECggUBAoIFBAoCBQQKAgUJcABAoIFAQKCBQQKAgUECgIFOiXoRqcQ8/bQMLnI7OCAgIFBAoCBQQKAgUECuyRTUx1os5zrs2Ht1v9Bpx8/e2kx7s+5qCAQAGBgkABgYJAAYECAgWBAgIFgQICBQQKAgUECuG+uBXbuP/Iu+T6WEEBgQICBYECAgWBAgIFok33xQX3xQUECggUBAoIFAQKCBT4n/4CdJA0nrIle8UAAAAASUVORK5CYII=" alt="" width="232" height="384"><p class="muted">통학 15분이면 100점, 90분이 넘으면 0점으로 바꿔 계산합니다.</p></div>
+      <div class="wl"><span id="dLblP">희망 병원 30%</span><span id="dLblD">통학 70%</span></div>
+      <input type="range" id="dSlider" min="0" max="100" step="5" value="70" aria-label="통학과 희망 병원의 비중">
     </div>
-    <div id="dRows"></div>
-  </div>
-  <div style="text-align:center;margin-top:28px"><a class="btn" href="/app" style="padding:16px 34px;font-size:17px">배정 시스템 열기</a></div>
-</div></section>
-
-<section id="steps" class="alt"><div class="wrap">
-  <div class="sec-h"><h2>세 단계로 끝납니다</h2><p>조건을 정하고, 명단을 올리고, 추천안을 확인합니다.</p></div>
-  <div class="grid g3" style="margin-top:16px">
-    <div class="card"><div class="ico">1</div><h3>조건 설정</h3><p>배정 방식, 교과목, 실습 기간, 거리와 희망의 비중, 병원별 정원을 정합니다.</p></div>
-    <div class="card"><div class="ico">2</div><h3>명단 업로드</h3><p>엑셀이나 CSV 명단을 올립니다. 파일은 서버에 저장하지 않고 처리 후 사라집니다.</p></div>
-    <div class="card"><div class="ico">3</div><h3>추천안 확인</h3><p>병원별 현황, 통학시간 분포, 지망 충족률을 보고 학생별 근거를 확인합니다.</p></div>
-  </div>
-
-  <div style="text-align:center;margin-top:28px"><a class="btn" href="/app">배정 시스템 열기</a></div>
-</div></section>
-
-<section id="guide"><div class="wrap">
-  <div class="sec-h"><h2>처음 쓰는 분을 위한 안내</h2><p>자주 묻는 내용을 모았습니다.</p></div>
-  __GUIDE_BTN__
-  <div class="faq">
-    <details><summary>학생 명단은 서버에 저장되나요?</summary><p>저장하지 않습니다. 올린 파일은 메모리에서 처리한 뒤 사라지고, 결과는 엑셀로 내려받아 보관합니다.</p></details>
-    <details><summary>명단 파일은 어떤 형식이어야 하나요?</summary><p>엑셀(.xlsx) 또는 CSV입니다. 필수 열은 학번, 이름, 성별, GPA, 출생연도이며, 양식 샘플을 내려받아 확인할 수 있습니다.</p></details>
-    <details><summary>통학시간 앞의 '약'은 무슨 뜻인가요?</summary><p>지도 위치를 바탕으로 계산한 예상 소요시간이라는 뜻입니다. '추정'은 주소 정보가 부족해 규칙으로 계산한 값입니다.</p></details>
-    <details><summary>지도에 표시되는 거주지는 실제 집인가요?</summary><p>아닙니다. 주소가 동 단위까지만 있어서, 동네 기준의 대략적인 위치로 표시합니다.</p></details>
-    <details><summary>배정 결과를 그대로 확정하나요?</summary><p>아닙니다. 시스템은 추천안과 근거를 제공하고, 검토와 최종 결정은 교수자가 합니다.</p></details>
-    <details><summary>미배정 학생이 나오면 어떻게 하나요?</summary><p>미배정·사유 탭에서 이유(정원 부족, 조건 불일치 등)를 확인하고, 정원이나 조건을 조정해 다시 배정할 수 있습니다.</p></details>
+    <div class="frame" id="dRows" data-visual aria-live="polite"></div>
   </div>
 </div></section>
 
-<section id="team" class="alt"><div class="wrap">
-  <div class="sec-h"><h2>만든 사람들</h2><p>안산대학교 간호학과 팀 로켓단입니다.</p></div>
-  <div class="team">
-    <div class="mem"><img class="px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACEAAAAzCAYAAAAZ+mH/AAADdklEQVR42tVYTUhUURT+3jRIhGiIiyGcGMbJxkU2WJkKA2KzbCGWBi2GiAhxISaznIWLljLJW8RjaNPbqSktWhREGANqWoPlIsmfEUdjFiIpLkSE12J8z3vf3Pc7byY7m3d/zr33u+d+55z7LucPtsKCSHKhw7NPdUznqsgqZ2VSt1UA5OKemkrkdg8oUCdgJCtAXFYQswB4aio1dUoCghTZAvK3GHHhDMiZAGGFmJjOVSHg3gIA1NVS3oCtnTwXVo/rSgJCIisfIhFd5fr3y+pxhl7CmYgTkh3GE+7KFWsJiXRJPS8xmIMrxhJMK2zt7FOcYAGUwZmxhtuOmdWkzO0eFAArmXfIHsACYxeAZRDqhZICr6n7tG/AeRBJgacmPqyoUcrRgWGlLPLDpbWE1u7tLGw7bCcFHg1dcZy7eqegT6vdERCsndc3trGjJdGeFHhdzli2hNnJ7IphsAKAX2+f25q8oStu6rpnZAlq8OGnRapzLi5gLi5AT8eJ3EHJ+c4QVfcEAvA9iujqOOaifzY3mO0XOwOafU5ywjYvzPLBCISkN3Cef0LVWwZewQq/TB+HMPUOANDkrT6NjqksomEvMPua0p1ZSJ32nciP7B4AoK/7riVOSEbbiYa9EFNZDPl9VHtCBcDAspyuJWYWUgU7YQFJpIAh/3oewLpfFwA5Z/utsDOXGgeEsorbzBHoWUMum5HtTAYT46JS7+mNAoDE+YOt0gVfh+bARCJGEVMX2ItvEJ/dKDjOJm81tjMZAEDztSsAgPTSigLEsT8wMZVVvnKZtAAJYC0cRnX/YwDAxLiY58QlX7BoECFfFUI+7XumDKC+sQ1rP2eV9vTSSh7E741l5sD++yHHGUkCMJVFX75ZxOrMR0cWlznAajN00UB7BFNjkwCA7gf3NPX0yHu9YhPfjy4jvbTCJCbnD7ZKRsFKXmBqbFIXiFrUYXtiXMSX+TRutzSTLgq3KoRKtdufSbpRk1oBwJKe3ihisUFlcTlYlfORhGPUOSYniHuAkkW1ckipXmqoo5HPUgZDyuLGPoShh6b6jTK0y8B8nJM7jsUGMTIy+m+yaIVbnx+ucgBovtkCAOBHR5lH4yqHBdJf5/Ws8n88pkrFTH50bK7N8F+UlfXUf+FGOvIREAC4snuHavecZRdlpWAbOlzRTwMlyBuU/AV+2j+v68a6jwAAAABJRU5ErkJggg==" alt="강지우 캐릭터"><b>강지우</b><span>팀장</span></div>
-    <div class="mem"><img class="px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAvCAYAAAD9/drQAAACqklEQVR42mNU0rBgwAH+M5AHGLEJsuCzhIeFNBu+/IHrxbCMCZcmUi0hpIeFUJAZmdkQtODcqSPYzEDxFSOWOPpPqm+MzGxQLIMGISNRQYcNvHnzAisfi48YiI4jagMmUnwjIiKBkz/0fITuelJ8Q9Cic2taGBgYGBh0pFjgNLIYTBwmhg8QlZAXTWogSoyioDu3poVBLaCGgVndGcOnyOKEfEV0HClrWpIkTlTQERPm+PSpBdRgFunYiiAGBgaGWxvIswzJEoJFEIqCH/suoEieqJnBcKJmBgM+NdiqCYKpjsPJAIUvoaLCoJDgglcNScn7w6MHWMUFnFRwyuGtdnFU5WTFE674wWYR3nbCqUkpKHyzvDlEtx8wgm7Gui0MDAwMDHqy/IhS4PBjhjhbWQaG4wtR1B47fRghBwWXHn9kYGBgYMgI8sGII4KtnThbWYZFhx8zFCkpoIj3oVmCr1nAqKRh8f/Y6cMYLkL2EbLPipTuQSy5pwS3ZN3KtSjqVKxcUPRbmdoysJCTKfdtWcBgwMDAcOkaLCmiBhPDtgKGS5RUfHG2sgx995TIKjFI9lGcrSzDpWsMDK7Fi+FirhiqwuGs3b2x9K3KWSjR3L39Pk65TV9mMRwObaeORaWeirjlGNop85HI04MMTj4JDH9v7sWZMEo9FRmeBwYySK5fT3sfiXXkMPy9uZfBySeBgWFODcQiK1NbjCKIkjiKmVXEINaRgxF0jKR0vt5I2zNcmpnI4Fq8mKFUHYciz/UMf2/upV6qwwdgrSNYPsJpEazMoxbAWR9hi6sLDz4xzCiKYpiRokKSJRlz7mD4iJGYuMqYcwevQ6heMpDSMx983ZYhbdF/Kpj7n6i2993rxwn2KohQwzggQYe923L5NuEuChFqiOq2UDsvAQDmxOC3ExOgygAAAABJRU5ErkJggg==" alt="최영락 캐릭터"><b>최영락</b><span>팀원</span></div>
-    <div class="mem"><img class="px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB0AAAAwCAYAAADtoXHnAAACzklEQVR42u1YP2gTURj/XbihFLElZJBohmoqOrRDiLEWskkGJ0nRVodwk2MQ6eTQwcGpIGQqnY4MkjTkJnHQbgdRmnBIExFMA0KkUwmpBHHyHOw73728u3t3SbD++eDg7vu+937fv/e99066eGUJDmQiGEleCrIbYOhb3xfa96lZMtYVOOQo4AD2+j1XUFEjQ0HCqih5KEreTcV1DomTU5O1WFHyUNUCev0ewrNhGx8AVLXAC7MUGJQAkvDSoDydsYDS+eQBuhSU5LuQWBIFDFpIE6fTDdoobQjxhFqWSCGlLkes972PR1xeo7SB5NoTtpBMXouU/Xrng0wAqOwUAQB37uasFhkSAUwoBcxcvzekw/JZIys7RSQW5pFYmLfAAZghUQ8vXb3BNY7lk7EE0DKQAv4t1cstJAAw1HygCRPKz3ZoqHl0ppOWt0azTfLK9dTWvozSS5uwtamhtanBTccK/dcGjGbbBghAkj0tX7tl+z4XjyNye9FVhwUm3nsumaPDz3xBKuwso+h5K4Ts6srJV8EWQUfQzGPNd14pj3ydkWwdpDOdpHOBV0+zQ4bRa5LQ+vpDykuBg9mW9gIAsBibsSYYRFPIpWMYvH5m063VdRT1Ls4c7uH83BxqdR373WMc1HY9G75JPVzKpWMo6l1EohdsT1HvIpeO2XQParuIL9/0Dm+trluM/e6xI/C2DjwIvwUAbPeWhgDHtrVlV1eglauOcq1ctfKnlaueXnruMk7ekvegJPsd4ARGPHZKj29QEmJ2GZCwa+UqBtGUTbZ8LT26pywwAfTIoTRyeOmiEg3lWHLq1mkmBkoT6Vp/xLlXBoCp95VfnLOZv/OEL7P74JaWce3BkziYmewWR9O7T1+w9ei+kNzPOpVG/LMi9Ifl/1Xx3wA1xzCv//9InQ9vnE/sJ7c0AR3p9HUkloxm23OgiI7vq+I4up2T4AfMHhxmQ6yU0AAAAABJRU5ErkJggg==" alt="정현민 캐릭터"><b>정현민</b><span>팀원</span></div>
-    <div class="mem"><img class="px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAxCAYAAADJP8l8AAADCElEQVR42r1YTWgTQRT+VkPpoYdYAoYQ2xKlRrEFMbRpQUELsSBIKihBEIr0HBQ8KJQQtaAHTznvwVMpCpqjFFFRTE31EKyaWJKSlhCWEiSHHIJo1kO66+44M5ndbHyX3Z03M9987837SaRAMAyGqLAnEk/p4oH5oVhCqsCrrWWC7iNAVLtgxBrTXkyGfijaKXWJhI8zAVY/fOOCk3sBgGTwoWqVlXYYFvAeoCTiQyHhMRTxYUcTWmUuBNhrsWzSV2mZqTsXXbBuUrtgjjI8ExpHcjFO1SWXUtbSEC8srDIiTSocFkq9Aa97AAvJFdO4nIzp76Tube4L/Ia1tkwqJ2MYjS4CADbTSyYQmm4rp3R/aUr5NUy7m1SWpM5W4JNybeokpk8ELOtsATZqTbhGQlhvDKJRa+rs5GSMqbMVFuvpCC7OZzDg6WduxNMJM9TKyUR0FQDQytWAaqvzLtVWey5lL14cdozFzYcvTLrR27OWYpAKqJs1xciLn3+1n+P0iJqIy9z+RmI0UaoWX0ap75RN3+6hETPjvbjk9TRMhtTLRLAm2Ah1cC4SpJRfo67MbmwDykvT2PKTFUyODVPnHz42RRKQ9LDgLTRK2ReB3+dpX4pqDWi1uBlKO+jVKzF79dDv86D/xyP9/b9U/ObgLdP3nacF0/eDy0FnKv7k2DDKld2/5q3sCrmha4akdGJERkDXgEY5fXaOOu7zttNcVVGcBQSAeOoxdTwVn7dm0uzGNnWM5cdLfZ/092c/Q/bCwri5nQtjy4eVarsMHTxwiDvPyEooLM7fz1LHE3IGCTnjbCOs+Ut7Gs2nlAvdd96hviJ+fy8CAPYfnQEA3Iv+W7FPzd1FvdAuwhduBpG4Hmbexp4FvlHevX5OVgs6oKFwopSfcfIM1HookenH7pV3pBHu+Q9SWkaxmoEsAWrVOTh7A0cCQyhu7TAXL7+pmvRKuaDfYlFAqcu/vTp2bVwf8tiJ6EUBVQfuhiralwKAymoVjQEtMEcSzjTvP37tSEFkjjDDXmUZAPgDFuQhjuV0nZQAAAAASUVORK5CYII=" alt="강민정 교수님 캐릭터"><b>강민정 교수님</b><span>지도교수, 간호관리학</span></div>
+<section id="results" class="ground-inverse" style="--h:1"><div class="wrap">
+  <div class="head"><h2 class="h2">무작위 배정과 비교한 결과</h2><p>가상 학생 221명과 4학년 1학기 관리 실습 병원 9곳으로, 정원만 지키며 무작위로 배정한 경우와 비교했습니다.<sup>1</sup></p></div>
+  <div class="res">
+    <div class="chart" data-visual data-ui>
+      <div class="legend"><span><i style="background:#3d5560"></i>무작위 배정 100회 평균</span><span><i style="background:#5fc2c9"></i>로켓단 추천</span></div>
+      <div class="cmp"><b>평균 통학시간</b><div class="ln" style="width:100%"></div><span class="num">56.7분</span><div class="ln us" style="width:61.7%"></div><span class="us num">35분</span></div>
+      <div class="cmp"><b>지망 충족률</b><div class="ln" style="width:25.5%"></div><span class="num">19.4%</span><div class="ln us" style="width:100%"></div><span class="us num">76%</span></div>
+      <div class="cmp"><b>평균 매칭점수</b><div class="ln" style="width:55.3%"></div><span class="num">41.8점</span><div class="ln us" style="width:100%"></div><span class="us num">75.6점</span></div>
+    </div>
+    <div class="side">
+      <div class="big"><b class="num">−21.7분</b><p>학생 한 명당 하루 편도 통학이 이만큼 줄었습니다.</p></div>
+      <div class="big"><b class="num">0명</b><p>221명 모두 병원 정원 안에서 배정됐습니다.</p></div>
+    </div>
+  </div>
+  <p class="fn"><sup>1</sup> 시뮬레이션 결과이며 통학시간은 지도 기반 예상값입니다. 실제 학기 명단으로 다시 확인할 예정입니다.</p>
+</div></section>
+
+<section id="steps" style="--h:1;--ht:2;--hm:2"><div class="wrap">
+  <div class="head"><h2 class="h2">세 단계로 배정합니다</h2><p>엑셀 명단 하나면 됩니다. 올린 파일은 서버에 저장하지 않고, 결과는 엑셀로 내려받습니다.</p></div>
+  <div class="cards3">
+    <div class="card"><span class="step">1단계</span><h3>교과목과 조건을 고릅니다</h3>
+      <div class="panel" data-visual><div class="ui">
+        <div class="f-row"><span>교과목</span><span class="f-sel">4학년 1학기 관리 실습</span></div>
+        <div class="f-row"><span>실습 기간</span><span class="f-sel num">10일</span></div>
+        <div class="f-row"><span>통학 : 희망</span><span class="f-sel num">70 : 30</span></div>
+        <div class="f-row x2"><span>병원별 정원</span><span class="f-sel">9곳 입력됨</span></div>
+        <div class="f-row x2"><span>성별 조건</span><span class="f-sel">병원별 적용</span></div>
+        <div class="f-row x1 x2"><span>GPA 하한</span><span class="f-sel num">없음</span></div>
+        <div class="f-row x1 x2"><span>과거 실습기관</span><span class="f-sel">같은 병원 제외</span></div>
+        <div class="f-row x1 x2"><span>배정 방식</span><span class="f-sel">전체 병원 동시 배정</span></div>
+      </div></div></div>
+    <div class="card"><span class="step">2단계</span><h3>학생 명단을 올립니다</h3>
+      <div class="panel" data-visual><div class="ui">
+        <div class="drop">엑셀(.xlsx) 또는 CSV 파일을 끌어다 놓으세요</div>
+        <div class="file"><span class="xl">XLS</span><div><b>4학년_명단.xlsx</b><small class="num">221명 · 학번, 이름, 성별, GPA, 주소, 1~3지망</small></div></div>
+        <div class="f-row x2"><span>필수 열 확인</span><span class="ok">7개 모두 있음</span></div>
+        <div class="f-row x2"><span>주소 → 지도 위치</span><span class="ok">221명 완료</span></div>
+        <div class="f-row x1 x2"><span>자격 조건 확인</span><span class="ok">221명 통과</span></div>
+        <div class="f-row x1 x2"><span>통학시간 계산</span><span class="ok">1,989건 완료</span></div>
+      </div></div></div>
+    <div class="card"><span class="step">3단계</span><h3>추천안을 보고 확정합니다</h3>
+      <div class="panel" data-visual><div class="ui">
+        <div class="dl"><span>엑셀로 내려받기</span></div>
+        <table class="tbl num"><thead><tr><th>병원</th><th class="r">배정</th><th class="r">정원</th></tr></thead><tbody>
+          <tr><td>고려대구로</td><td class="r">32</td><td class="r">32</td></tr>
+          <tr><td>순천향부천</td><td class="r">28</td><td class="r">28</td></tr>
+          <tr><td>단원병원</td><td class="r">24</td><td class="r">24</td></tr>
+          <tr class="x2"><td>고려대안산</td><td class="r">30</td><td class="r">30</td></tr>
+          <tr class="x1 x2"><td>아주대학교병원</td><td class="r">26</td><td class="r">26</td></tr>
+          <tr class="x1 x2"><td>시화병원</td><td class="r">22</td><td class="r">22</td></tr>
+        </tbody></table>
+      </div></div></div>
   </div>
 </div></section>
 
-<section class="fin"><div class="wrap">
-  <div class="final">
-    <h2>결정은 교수자가, 근거는 시스템이</h2>
-    <p>로켓단은 배정을 대신 결정하지 않습니다. 더 합리적으로 선택할 수 있도록 추천안과 그 이유를 제공합니다.</p>
-    <a class="btn" href="/app">배정 시스템 열기</a>
+<section id="team" class="ground-surface" style="--h:1"><div class="wrap">
+  <div class="head"><h2 class="h2">만든 사람들</h2><p>안산대학교 간호학과 3학년 강지우(팀장), 최영락, 정현민이 만들고 강민정 교수님(간호관리학)이 지도했습니다. 실습을 다니며 겪은 배정 문제에서 출발한 캡스톤디자인 작품입니다.</p></div>
+  <div class="crew" data-visual><img src="data:image/png;base64,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" width="612" height="306" alt="팀 로켓단 캐릭터: 왼쪽부터 강지우, 최영락, 정현민, 강민정 교수님"></div>
+  </div>
+</div></section>
+
+<section id="faq" style="--h:1;--hm:2"><div class="wrap">
+  <div class="head"><h2 class="h2">자주 묻는 질문</h2><p>처음 쓰는 교수자와 조교가 가장 많이 묻는 내용입니다.</p></div>
+  <div class="split split--faq">
+    <div class="faq">
+      <div><h3>학생 명단은 서버에 저장되나요?</h3><p>저장하지 않습니다. 메모리에서 처리한 뒤 사라지고, 결과는 엑셀로 내려받아 보관합니다.</p></div>
+      <div><h3>통학시간은 어떻게 계산하나요?</h3><p>지도 위치로 예상 소요시간을 구하고, TMAP 키를 넣으면 평일 오전 6시 출발 대중교통 경로를 씁니다.</p></div>
+      <div><h3>배정 결과를 그대로 확정하나요?</h3><p>아닙니다. 프로그램은 추천안과 근거를 보여 주고, 최종 결정은 교수자가 합니다.</p></div>
+      <div><h3>지도에 나오는 거주지는 실제 집인가요?</h3><p>아닙니다. 주소를 동 단위까지만 써서 동네 기준의 대략적인 위치입니다.</p></div>
+      <div class="q5"><h3>미배정 학생이 나오면 어떻게 하나요?</h3><p>미배정·사유 탭에서 이유를 확인하고, 정원이나 조건을 바꿔 다시 계산하면 됩니다.</p></div>
+    </div>
+    <div class="frame frame--sheet" data-visual>
+      <div class="ui" role="img" aria-label="명단 양식: 학번, 이름, 성별, GPA, 출생연도, 주소, 1~3지망 열">
+        <div class="ui-bar"><span class="xl">XLS</span><b>명단_양식.xlsx</b><span class="sp"></span><span>필수 열 7개</span></div>
+        <table class="tbl sheet num"><thead><tr><th>학번</th><th>이름</th><th class="t-hide">성별</th><th class="r t-hide">GPA</th><th class="r t-hide">출생</th><th class="t-hide">주소(동)</th><th>1지망</th></tr></thead><tbody>
+          <tr><td>202○○○07</td><td>김○수</td><td class="t-hide">남</td><td class="r t-hide">3.84</td><td class="r t-hide">2004</td><td class="t-hide">안산 고잔동</td><td>고려대구로</td></tr>
+          <tr><td>202○○○15</td><td>이○은</td><td class="t-hide">여</td><td class="r t-hide">4.12</td><td class="r t-hide">2005</td><td class="t-hide">부천 중동</td><td>순천향부천</td></tr>
+          <tr><td>202○○○31</td><td>박○준</td><td class="t-hide">남</td><td class="r t-hide">3.47</td><td class="r t-hide">2003</td><td class="t-hide">안산 와동</td><td>아주대</td></tr>
+          <tr><td>202○○○42</td><td>최○린</td><td class="t-hide">여</td><td class="r t-hide">3.95</td><td class="r t-hide">2005</td><td class="t-hide">수원 매탄동</td><td>아주대</td></tr>
+          <tr><td>202○○○58</td><td>정○우</td><td class="t-hide">남</td><td class="r t-hide">3.21</td><td class="r t-hide">2004</td><td class="t-hide">시흥 정왕동</td><td>시화병원</td></tr>
+          <tr><td>202○○○63</td><td>한○영</td><td class="t-hide">여</td><td class="r t-hide">3.68</td><td class="r t-hide">2005</td><td class="t-hide">안산 사동</td><td>고려대안산</td></tr>
+        </tbody></table>
+      </div>
+    </div>
   </div>
 </div></section>
 </main>
 
-<footer><div class="wrap foot">
-  <div><b>로켓단</b><span>AI기반 간호실습 배치 의사결정 프로그램</span><span>안산대학교 간호학과 캡스톤디자인</span></div>
-  <div><span>팀원 강지우(팀장), 최영락, 정현민</span><span>지도교수 강민정</span></div>
-  <div class="links"><a href="/app">배정 시스템 열기</a>__GUIDE_FOOT__</div>
+<footer class="closing" id="contact"><div class="wrap">
+  <div class="close">
+    <div class="close__head"><div><h2 class="h2">명단을 올리면 배정안이 나옵니다</h2><p>설치 없이 웹에서 바로 씁니다. 샘플 명단으로 먼저 해 볼 수도 있습니다.</p></div><a class="btn btn--primary" href="/app">배정 시작하기</a></div>
+    <div class="close__name" aria-hidden="true">로켓단</div>
+  </div>
+  <div class="dir">
+    <div><b>로켓단</b><span>AI기반 간호실습 배치 의사결정 프로그램</span><span>안산대학교 간호학과 캡스톤디자인</span></div>
+    <div><b>팀</b><span>강지우(팀장), 최영락, 정현민</span><span>지도교수 강민정</span></div>
+    <div><b>바로가기</b><span><a class="link" href="/app">배정 시스템</a></span>__GUIDE_FOOT__</div>
+    <div class="legal">© 2026 로켓단</div>
+  </div>
 </div></footer>
+
 <script>
 (function () {
-  /* 비중 체험: 앱과 같은 환산(15분=100점, 90분 이상=0점) */
   var H = [
     {n: '고려대학교구로병원', t: 47, p: 100, g: '1지망'},
     {n: '서울특별시서남병원', t: 50, p: 70, g: '2지망'},
@@ -2412,43 +2564,17 @@ LANDING_PAGE = """<!DOCTYPE html>
   function esc(x) { return String(x).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
   function draw() {
     var w = +sl.value / 100;
-    document.getElementById('dLblD').textContent = '통학 거리 ' + sl.value + '%';
+    document.getElementById('dLblD').textContent = '통학 ' + sl.value + '%';
     document.getElementById('dLblP').textContent = '희망 병원 ' + (100 - sl.value) + '%';
     var r = H.map(function (h) {
       var d = Math.max(0, Math.min(100, 100 - (h.t - 15) / 75 * 100));
       return {n: h.n, t: h.t, g: h.g, s: d * w + h.p * (1 - w)};
     }).sort(function (a, b) { return b.s - a.s; });
     box.innerHTML = r.map(function (x, i) {
-      return '<div class="dr' + (i === 0 ? ' top' : '') + '"><div><span class="nm">' + esc(x.n) + (i === 0 ? '<em>추천</em>' : '') + '</span><div class="sub">' + esc(x.g) + ' · 통학 약 ' + x.t + '분</div></div><div class="sc">' + x.s.toFixed(1) + '점</div><div class="tr"><i style="width:' + Math.max(2, x.s) + '%"></i></div></div>';
+      return '<div class="dr' + (i === 0 ? ' top' : '') + '"><span class="nm">' + esc(x.n) + (i === 0 ? '<em>추천</em>' : '') + '</span><span class="sc num">' + x.s.toFixed(1) + '점</span><span class="sub">' + esc(x.g) + ', 통학 약 ' + x.t + '분</span><div class="tr"><i style="width:' + Math.max(2, x.s) + '%"></i></div></div>';
     }).join('');
   }
   sl.addEventListener('input', draw); draw();
-
-  /* 숫자 키 1~9: 해당 구역으로 이동 */
-  var ORDER = ['intro', 'why', 'compare', 'numbers', 'service', 'start', 'steps', 'guide', 'team'];
-  document.addEventListener('keydown', function (e) {
-    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-    var t = e.target, tag = t && t.tagName;
-    if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && t.type !== 'range')) return;
-    var n = parseInt(e.key, 10);
-    if (!(n >= 1 && n <= ORDER.length)) return;
-    var el = document.getElementById(ORDER[n - 1]);
-    if (el) { e.preventDefault(); el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
-  });
-
-  /* 오른쪽 점 메뉴: 지금 보는 구역 표시 */
-  var dots = document.querySelectorAll('.dots a');
-  if (dots.length && 'IntersectionObserver' in window) {
-    var cur = null;
-    function mark(id) { dots.forEach(function (a) { a.classList.toggle('on', a.getAttribute('data-s') === id); }); }
-    var so = new IntersectionObserver(function (es) {
-      es.forEach(function (e) { if (e.isIntersecting) { cur = e.target.id; mark(cur); } });
-    }, {rootMargin: '-45% 0px -50% 0px', threshold: 0});
-    dots.forEach(function (a) { var t = document.getElementById(a.getAttribute('data-s')); if (t) so.observe(t); });
-    mark('intro');
-  }
-
-
 })();
 </script>
 </body>
