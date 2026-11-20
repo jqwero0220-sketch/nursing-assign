@@ -2,6 +2,10 @@
 AI기반 간호실습 배치 의사결정 프로그램
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v13.8 v13.3 디자인 기준으로 다듬기 — v13.4~13.7 화면은 사용하지 않음 (제목 위 꼬리표 제거, 예시 표 점수순, 장점 목록형, 숫자 효과·안내 문구 정리, 선택·초점·버튼 반응)
+  v13.7 접근성 점검 반영(안내문·초록 글자 대비, 제목 순서, 낡은 버튼 규칙 정리) — 화면 모양은 그대로
+  v13.6 v13.4 화면(글래스모피즘·새 색·이동 동작·주아체)으로 복원
+  v13.4 소개 페이지·배정 도구 전체 새 디자인(병원 라벨 시트 디자인 체계). 계산·기능·문구·팀 캐릭터는 그대로
   v13.3 소개 페이지 디자인을 v12.2로 되돌리고 "만든 사람들"(팀 캐릭터)과 맨 위 버전 표시만 유지
   v13.2 대중교통 조회 기준을 평일 오전 6시 출발로 변경(07시 실습 시작 기준, 환경변수 COMMUTE_TIME으로 조절)
   v13.1 소개 페이지 맨 위에 버전 표시
@@ -74,7 +78,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response, Streami
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v13.3"
+APP_VERSION = "v13.8"
 app = FastAPI(title=f"AI기반 간호실습 배치 의사결정 프로그램 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -2079,6 +2083,11 @@ LANDING_PAGE = """<!DOCTYPE html>
 <style>
   :root { --navy:#0f172a; --blue:#1e3a8a; --teal:#0d9488; --teal-d:#0f766e; --teal-l:#ccfbf1; --muted:#475569; --line:#e2e8f0; --bg:#f5f8fc; }
   * { box-sizing:border-box; }
+  ::selection { background:var(--teal-l); color:#134e4a; }
+  :focus-visible { outline:2px solid var(--teal-d); outline-offset:3px; border-radius:4px; }
+  html { scrollbar-color:#b6c4d6 transparent; accent-color:var(--teal-d); }
+  .stat .big, .mk-kpi b, .mk-tbl td, .dr .sc, .score .row b, .fact b { font-variant-numeric:tabular-nums; }
+  a { text-underline-offset:3px; }
   html { scroll-behavior:smooth; scroll-padding-top:70px; }
   body { margin:0; font-family:'Pretendard',-apple-system,'Noto Sans KR','Malgun Gothic',sans-serif; color:var(--navy); background:#fff; line-height:1.65; }
   body { word-break:keep-all; overflow-wrap:break-word; }
@@ -2092,25 +2101,34 @@ LANDING_PAGE = """<!DOCTYPE html>
   .nav a { color:var(--muted); text-decoration:none; }
   .nav a:hover { color:var(--navy); }
   .btn { display:inline-block; background:var(--teal-d); color:#fff !important; padding:13px 24px; border-radius:10px; font-weight:700; text-decoration:none; font-size:15px; }
-  .btn:hover { background:#0b5f58; }
+  .btn { transition:background .15s, transform .15s, box-shadow .15s; }
+  .btn:hover { background:#0b5f58; transform:translateY(-1px); box-shadow:0 6px 14px rgba(15,23,42,.16); }
+  .btn:active { transform:translateY(0); box-shadow:none; }
+  .hero .fact { font-size:15px; color:var(--navy); margin:-14px auto 30px; } .hero .fact b { color:var(--teal-d); }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; scroll-behavior:auto !important; } }
   .btn.sm { padding:9px 18px; font-size:14px; }
   .btn.ghost { background:#fff; color:var(--navy) !important; border:1.5px solid var(--line); }
-  .btn.ghost:hover { background:#f8fafc; }
+  .btn.ghost:hover { background:#f8fafc; border-color:#94a3b8; box-shadow:none; }
   .hero { background:linear-gradient(135deg,#e6faf6 0,#eef4ff 100%); padding:96px 0 84px; text-align:center; }
-  .hero .eyebrow { color:var(--teal-d); font-weight:700; font-size:14px; margin-bottom:14px; }
   .hero h1 { font-size:46px; line-height:1.25; letter-spacing:-1.3px; margin:0 0 18px; }
   .hero p { font-size:18px; color:var(--muted); max-width:820px; margin:0 auto 32px; }
   .hero .cta { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
   section { padding:72px 0; }
   section.alt { background:var(--bg); }
   .sec-h { text-align:center; margin-bottom:38px; }
-  .sec-h .tag { color:var(--teal-d); font-weight:700; font-size:14px; margin-bottom:6px; }
   h2 { font-size:30px; letter-spacing:-.7px; margin:0 0 10px; }
   .sec-h p { color:var(--muted); margin:0 auto; max-width:760px; }
   .grid { display:grid; gap:16px; }
   .g4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
   .g3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
   .g2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .why { display:grid; grid-template-columns:1fr 1.25fr; gap:56px; align-items:start; }
+  .why-h h2 { font-size:34px; line-height:1.3; }
+  .why-h p { color:var(--muted); font-size:17px; margin:0; }
+  .why-l { margin:0; border-top:2px solid var(--navy); }
+  .why-l div { display:grid; grid-template-columns:120px 1fr; gap:16px; padding:20px 0; border-bottom:1px solid var(--line); }
+  .why-l dt { font-weight:800; color:var(--teal-d); font-size:16px; }
+  .why-l dd { margin:0; color:#334155; font-size:16px; }
   .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:24px; }
   .card h3 { margin:0 0 8px; font-size:17px; }
   .card p { margin:0; color:var(--muted); font-size:15px; }
@@ -2144,11 +2162,10 @@ LANDING_PAGE = """<!DOCTYPE html>
   footer a { color:var(--muted); }
   .mock { max-width:880px; margin:48px auto 0; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 24px 60px rgba(15,23,42,.14); overflow:hidden; text-align:left; }
   .mock-bar { display:flex; align-items:center; gap:7px; padding:11px 14px; background:#f1f5f9; border-bottom:1px solid var(--line); font-size:12px; color:var(--muted); }
-  .mock-bar i { width:10px; height:10px; border-radius:50%; background:#cbd5e1; display:block; }
-  .mock-bar span { margin-left:10px; }
+  .mock-bar { justify-content:space-between; font-size:13px; } .mock-bar b { color:var(--navy); }
   .mock-body { padding:20px; }
   .mk-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
-  .mk-kpi { border:1px solid var(--line); border-left:4px solid var(--teal); border-radius:10px; padding:10px 14px; }
+  .mk-kpi { border:1px solid var(--line); border-radius:10px; padding:10px 14px; background:#f8fafc; }
   .mk-kpi small { display:block; color:var(--muted); font-size:12px; }
   .mk-kpi b { font-size:22px; letter-spacing:-.5px; }
   .mk-tbl { width:100%; border-collapse:collapse; font-size:13px; }
@@ -2186,14 +2203,15 @@ LANDING_PAGE = """<!DOCTYPE html>
   .faq details { background:#fff; border:1px solid var(--line); border-radius:12px; margin-bottom:10px; }
   .faq summary { cursor:pointer; padding:16px 20px; font-weight:700; font-size:16px; list-style:none; }
   .faq summary::-webkit-details-marker { display:none; }
-  .faq summary::after { content:'＋'; float:right; color:var(--muted); }
-  .faq details[open] summary::after { content:'－'; }
+  .faq summary { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .faq summary::after { content:''; flex:none; width:12px; height:12px; background:linear-gradient(var(--muted),var(--muted)) center/12px 2px no-repeat, linear-gradient(var(--muted),var(--muted)) center/2px 12px no-repeat; transition:transform .2s; }
+  .faq details[open] summary::after { transform:rotate(45deg); }
   .faq p { margin:0; padding:0 20px 18px; color:var(--muted); font-size:15px; }
   .dots { position:fixed; right:18px; top:50%; transform:translateY(-50%); z-index:4; display:none; flex-direction:column; gap:4px; }
   .dots a { position:relative; display:block; width:26px; height:22px; }
   .dots a::before { content:''; position:absolute; right:8px; top:7px; width:8px; height:8px; border-radius:50%; background:#cbd5e1; transition:all .2s; }
   .dots a:hover::before { background:var(--teal); }
-  .dots a.on::before { background:var(--teal-d); width:10px; height:10px; right:7px; top:6px; box-shadow:0 0 0 4px rgba(13,148,136,.18); }
+  .dots a.on::before { background:var(--teal-d); width:10px; height:10px; right:7px; top:6px;  }
   .dots a span { position:absolute; right:30px; top:1px; white-space:nowrap; background:var(--navy); color:#fff; font-size:12px; font-weight:600; padding:3px 10px; border-radius:6px; opacity:0; pointer-events:none; transition:opacity .15s; }
   .dots a:hover span, .dots a:focus-visible span { opacity:1; }
   .dots kbd { font:700 11px/1 inherit; background:rgba(255,255,255,.22); border-radius:4px; padding:2px 6px; margin-left:8px; }
@@ -2205,7 +2223,10 @@ LANDING_PAGE = """<!DOCTYPE html>
   @media (max-width:860px) { .team { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   .logo-wrap { display:flex; align-items:center; gap:10px; }
   .ver { font-size:12px; font-weight:700; color:var(--teal-d); background:var(--teal-l); padding:2px 8px; border-radius:99px; }
-  .keyhint { font-size:12px; color:var(--muted); margin-top:6px; }
+  .foot { display:grid; grid-template-columns:1.3fr 1fr auto; gap:24px; align-items:start; }
+  .foot span { display:block; } .foot b { display:block; color:var(--navy); font-size:15px; margin-bottom:2px; }
+  .pname { font-size:13px; color:var(--muted); font-weight:600; }
+  @media (max-width:860px) { .pname { display:none; } .foot { grid-template-columns:1fr; } .why { grid-template-columns:1fr; gap:24px; } .why-l div { grid-template-columns:96px 1fr; } }
   @media (min-width:1100px) { .dots { display:flex; } }
   /* 구역마다 화면 한 장(헤더 아래 전체 높이)에 맞춤 */
   html { scroll-snap-type:y proximity; }
@@ -2219,7 +2240,7 @@ LANDING_PAGE = """<!DOCTYPE html>
     .svc { grid-template-columns:1fr; }
   }
   @media (max-width:640px) {
-    .mk-kpis { grid-template-columns:1fr; } .mock-body { padding:12px; overflow-x:auto; } .mk-tbl { font-size:12px; } .mk-tbl .mh, .mk-tbl th:nth-child(3), .mk-tbl td:nth-child(3) { display:none; } .mk-tbl td, .mk-tbl th { padding:8px 4px; } .cmp th, .cmp td { padding:12px; font-size:14px; }
+    .mk-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; } .mk-kpi { padding:8px 10px; } .mk-kpi b { font-size:17px; } .mk-kpi small { font-size:11px; } .mock-body { padding:12px; overflow-x:auto; } .mk-tbl { font-size:12px; } .mk-tbl .mh, .mk-tbl th:nth-child(3), .mk-tbl td:nth-child(3) { display:none; } .mk-tbl td, .mk-tbl th { padding:8px 4px; } .cmp th, .cmp td { padding:12px; font-size:14px; }
     .hero { padding:56px 0 48px; } .hero h1 { font-size:31px; } .hero p { font-size:16px; }
     .g3, .g2, .g4 { grid-template-columns:1fr; } .nav a.hide { display:none; } section { padding:48px 0; }
     .nav { gap:14px; } h2 { font-size:25px; } .stat .big { font-size:30px; }
@@ -2227,21 +2248,21 @@ LANDING_PAGE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<div class="notice">캡스톤디자인 작품 · 학생 명단 파일은 서버에 저장되지 않습니다</div>
+<div class="notice">올린 학생 명단 파일은 서버에 저장되지 않습니다</div>
 <header class="top"><div class="wrap top-in">
-  <div class="logo-wrap"><a class="logo" href="/">로켓단</a><span class="ver">__APP_VERSION__</span></div>
+  <div class="logo-wrap"><a class="logo" href="/">로켓단</a><span class="pname">AI기반 간호실습 배치 의사결정 프로그램</span><span class="ver">__APP_VERSION__</span></div>
   <nav class="nav"><a class="hide" href="#intro">소개</a><a class="hide" href="#steps">순서</a><a class="hide" href="#guide">자주 묻는 질문</a><a class="hide" href="#team">만든 사람들</a><a class="btn sm" href="/app">배정 시스템 열기</a></nav>
 </div></header>
 
 <main>
 <nav class="dots" aria-label="구역 이동"><a href="#intro" data-s="intro" title="소개" aria-label="소개"><span>소개<kbd>1</kbd></span></a><a href="#why" data-s="why" title="왜 필요한가" aria-label="왜 필요한가"><span>왜 필요한가<kbd>2</kbd></span></a><a href="#compare" data-s="compare" title="비교" aria-label="비교"><span>비교<kbd>3</kbd></span></a><a href="#numbers" data-s="numbers" title="시험 결과" aria-label="시험 결과"><span>시험 결과<kbd>4</kbd></span></a><a href="#service" data-s="service" title="주요 기능" aria-label="주요 기능"><span>주요 기능<kbd>5</kbd></span></a><a href="#start" data-s="start" title="직접 해보기" aria-label="직접 해보기"><span>직접 해보기<kbd>6</kbd></span></a><a href="#steps" data-s="steps" title="순서" aria-label="순서"><span>순서<kbd>7</kbd></span></a><a href="#guide" data-s="guide" title="자주 묻는 질문" aria-label="자주 묻는 질문"><span>자주 묻는 질문<kbd>8</kbd></span></a><a href="#team" data-s="team" title="만든 사람들" aria-label="만든 사람들"><span>만든 사람들<kbd>9</kbd></span></a></nav>
 <div class="hero" id="intro"><div class="wrap">
-  <div class="eyebrow">AI기반 간호실습 배치 의사결정 프로그램</div>
-  <h1>실습 배정의 모든 과정,<br>거리와 희망으로 스마트하게</h1>
-  <p>통학 거리와 희망 병원을 함께 계산해 배정안을 추천하고, 근거까지 보여 줍니다.<br>최종 결정은 교수자가 합니다.</p>
-  <div class="cta"><a class="btn" href="/app">배정 시스템 열기</a><a class="btn ghost" href="#service">서비스 알아보기</a></div>
+  <h1>간호학과 실습 병원 배정,<br>통학과 희망을 함께 계산합니다</h1>
+  <p>학생 명단을 올리면 병원 정원 안에서 배정안을 추천하고, 학생마다 그 이유를 보여 줍니다. 최종 결정은 교수자가 합니다.</p>
+  <p class="fact">가상 학생 221명 시험에서 평균 통학시간 <b>56.7분 → 35분</b></p>
+  <div class="cta"><a class="btn" href="/app">배정 시스템 열기</a><a class="btn ghost" href="#start">비중 바꿔 보기</a></div>
   <div class="mock">
-    <div class="mock-bar"><i></i><i></i><i></i><span>로켓단 · 결과 확인</span></div>
+    <div class="mock-bar"><b>배정 결과</b><span>4학년 1학기 관리 실습</span></div>
     <div class="mock-body">
       <div class="mk-kpis">
         <div class="mk-kpi"><small>시험한 학생 수</small><b>221명</b></div>
@@ -2249,28 +2270,27 @@ LANDING_PAGE = """<!DOCTYPE html>
         <div class="mk-kpi"><small>지망 충족률</small><b>76%</b></div>
       </div>
       <table class="mk-tbl"><thead><tr><th class="l">배정 병원</th><th class="mh">학번</th><th>이름</th><th>지망</th><th>통학시간</th><th>종합점수</th></tr></thead><tbody>
-        <tr><td class="l">고려대학교구로병원</td><td class="mh">202○○○07</td><td><b>김○수</b></td><td><span class="hit">1지망</span></td><td><b>약 24분</b></td><td class="sc">91.6</td></tr>
         <tr><td class="l">순천향대학교부천병원</td><td class="mh">202○○○15</td><td><b>이○은</b></td><td><span class="hit">1지망</span></td><td><b>약 18분</b></td><td class="sc">97.2</td></tr>
+        <tr><td class="l">고려대학교구로병원</td><td class="mh">202○○○07</td><td><b>김○수</b></td><td><span class="hit">1지망</span></td><td><b>약 24분</b></td><td class="sc">91.6</td></tr>
         <tr><td class="l">단원병원</td><td class="mh">202○○○31</td><td><b>박○준</b></td><td><span class="hit">2지망</span></td><td><b>약 29분</b></td><td class="sc">77.9</td></tr>
         <tr><td class="l">아주대학교병원</td><td class="mh">202○○○42</td><td><b>최○린</b></td><td><span class="miss">지망 외</span></td><td><b>약 21분</b></td><td class="sc">67.4</td></tr>
       </tbody></table>
     </div>
-    <div class="mock-cap">화면 예시입니다. 가상 학생 데이터이고, 이름과 학번은 일부를 가렸습니다.</div>
   </div>
 </div></div>
 
-<section id="why"><div class="wrap">
-  <div class="sec-h"><div class="tag">Why 로켓단?</div><h2>배정 업무를 더 합리적으로</h2><p>엑셀로 손수 맞추던 실습 배정을, 설명할 수 있는 추천안으로 바꿉니다.</p></div>
-  <div class="grid g4">
-    <div class="card"><div class="ico">거리</div><h3>통학 부담 반영</h3><p>지도 기반 거리와 소요시간으로, 멀리 가는 학생을 줄이는 방향으로 계산합니다.</p></div>
-    <div class="card"><div class="ico">희망</div><h3>학생 희망 반영</h3><p>1~3지망을 점수에 넣고, 거리와 희망의 비중은 슬라이더로 조절합니다.</p></div>
-    <div class="card"><div class="ico">근거</div><h3>근거를 보여 주는 결과</h3><p>학생마다 점수 계산 내역과 다른 병원이었을 때의 점수, 위치 지도를 확인할 수 있습니다.</p></div>
-    <div class="card"><div class="ico">결정</div><h3>최종 결정은 교수자</h3><p>시스템은 추천안을 제공하고, 검토와 확정은 교수자가 합니다.</p></div>
-  </div>
+<section id="why"><div class="wrap why">
+  <div class="why-h"><h2>배정 업무를 더 합리적으로</h2><p>엑셀로 한 명씩 맞추던 실습 배정을, 이유를 설명할 수 있는 추천안으로 바꿉니다.</p></div>
+  <dl class="why-l">
+    <div><dt>통학 부담</dt><dd>지도 기반 소요시간과 환승·도보를 점수로 바꿔, 멀리 가는 학생이 줄어드는 쪽으로 계산합니다.</dd></div>
+    <div><dt>학생 희망</dt><dd>1~3지망을 점수에 넣고, 통학과 희망의 비중은 슬라이더로 정합니다.</dd></div>
+    <div><dt>배정 근거</dt><dd>학생마다 점수 계산 내역, 다른 병원이었을 때의 점수, 위치 지도를 보여 줍니다.</dd></div>
+    <div><dt>최종 결정</dt><dd>시스템은 추천안만 냅니다. 검토와 확정은 교수자가 합니다.</dd></div>
+  </dl>
 </div></section>
 
 <section id="compare" class="alt"><div class="wrap">
-  <div class="sec-h"><div class="tag">비교</div><h2>엑셀 수작업과 무엇이 다른가</h2><p>최종 결정은 그대로 교수자가 합니다. 계산과 근거 정리를 시스템이 돕습니다.</p></div>
+  <div class="sec-h"><h2>엑셀 수작업과 무엇이 다른가</h2><p>최종 결정은 그대로 교수자가 합니다. 계산과 근거 정리를 시스템이 돕습니다.</p></div>
   <table class="cmp"><thead><tr><th></th><th>엑셀 수작업</th><th class="us">로켓단</th></tr></thead><tbody>
     <tr><td>통학 거리</td><td class="old">학생 주소를 보고 사람이 판단</td><td class="new">지도 기반 거리와 소요시간을 자동 계산</td></tr>
     <tr><td>학생 희망</td><td class="old">1~3지망을 보며 하나씩 조정</td><td class="new">지망을 점수에 반영해 한 번에 계산</td></tr>
@@ -2281,18 +2301,18 @@ LANDING_PAGE = """<!DOCTYPE html>
 </div></section>
 
 <section id="numbers"><div class="wrap">
-  <div class="sec-h"><div class="tag">시험 결과</div><h2>숫자로 보는 로켓단</h2><p>가상 학생 221명 · 4학년 1학기 관리 실습 9개 병원으로, 정원만 지킨 무작위 배정 100회 평균과 비교했습니다.</p></div>
+  <div class="sec-h"><h2>숫자로 보는 로켓단</h2><p>가상 학생 221명과 4학년 1학기 관리 실습 9개 병원으로, 정원만 지킨 무작위 배정 100회 평균과 비교했습니다.</p></div>
   <div class="stats">
-    <div class="stat"><div class="from">무작위 배정 56.7분</div><div class="big"><span class="cnt" data-n="35">35</span><small> 분</small></div><div class="t">평균 통학시간</div><div class="gain">21.7분 단축 (−38%)</div></div>
-    <div class="stat"><div class="from">무작위 배정 19.4%</div><div class="big"><span class="cnt" data-n="76">76</span><small> %</small></div><div class="t">지망 충족률</div><div class="gain">+56.6%p</div></div>
-    <div class="stat"><div class="from">무작위 배정 41.8점</div><div class="big"><span class="cnt" data-n="75.6">75.6</span><small> 점</small></div><div class="t">평균 매칭점수</div><div class="gain">+33.8점</div></div>
-    <div class="stat"><div class="from">221명 전원 배정</div><div class="big"><span class="cnt" data-n="0">0</span><small> 명</small></div><div class="t">미배정 학생</div><div class="gain">병원 정원 100% 준수</div></div>
+    <div class="stat"><div class="from">무작위 배정 56.7분</div><div class="big">35<small> 분</small></div><div class="t">평균 통학시간</div><div class="gain">21.7분 단축 (−38%)</div></div>
+    <div class="stat"><div class="from">무작위 배정 19.4%</div><div class="big">76<small> %</small></div><div class="t">지망 충족률</div><div class="gain">+56.6%p</div></div>
+    <div class="stat"><div class="from">무작위 배정 41.8점</div><div class="big">75.6<small> 점</small></div><div class="t">평균 매칭점수</div><div class="gain">+33.8점</div></div>
+    <div class="stat"><div class="from">221명 전원 배정</div><div class="big">0<small> 명</small></div><div class="t">미배정 학생</div><div class="gain">병원 정원 100% 준수</div></div>
   </div>
   <div class="note">가상 명단 기준 시뮬레이션 결과이며, 통학시간은 지도 기반 예상값입니다. 실제 학과의 배정 결과와 비교한 값이 아닙니다.</div>
 </div></section>
 
 <section id="service" class="alt"><div class="wrap">
-  <div class="sec-h"><div class="tag">주요 기능</div><h2>시스템이 계산하고, 교수자가 결정합니다</h2><p>최적화 알고리즘(헝가리안 알고리즘)이 병원 정원 안에서 학생 전체의 점수 합이 가장 높은 조합을 찾습니다.</p></div>
+  <div class="sec-h"><h2>시스템이 계산하고, 교수자가 결정합니다</h2><p>최적화 알고리즘(헝가리안 알고리즘)이 병원 정원 안에서 학생 전체의 점수 합이 가장 높은 조합을 찾습니다.</p></div>
   <div class="svc">
     <div>
       <h3>조건을 정하고 명단을 올리면, 추천안이 나옵니다</h3>
@@ -2312,20 +2332,19 @@ LANDING_PAGE = """<!DOCTYPE html>
       <div class="row"><span>통학 점수 57.3 × 70%</span><b>40.1</b></div>
       <div class="row"><span>지망 점수 100 (1지망 일치) × 30%</span><b>30.0</b></div>
       <div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><b>종합 매칭점수</b><b>70.1</b></div>
-      <div style="font-size:13px;color:var(--muted);margin-top:8px">예시 화면입니다. 비중은 슬라이더로 바꿀 수 있습니다.</div>
     </div>
   </div>
   </div></section>
 
 <section id="start"><div class="wrap">
-  <div class="sec-h"><div class="tag">직접 해보기</div><h2>먼저 비중을 바꿔 보세요</h2><p>슬라이더를 움직여 보세요. 통학 거리를 중요하게 보면 가까운 병원이, 희망을 중요하게 보면 희망 병원이 올라옵니다.</p></div>
+  <div class="sec-h"><h2>먼저 비중을 바꿔 보세요</h2><p>슬라이더를 움직여 보세요. 통학 거리를 중요하게 보면 가까운 병원이, 희망을 중요하게 보면 희망 병원이 올라옵니다.</p></div>
   <div class="demo">
     <div>
       <h3>예시 학생 한 명</h3>
       <p>1지망 고려대학교구로병원, 2지망 서울특별시서남병원을 적은 학생입니다.</p>
       <div class="wl"><span id="dLblP">희망 병원 30%</span><span id="dLblD">통학 거리 70%</span></div>
       <input type="range" id="dSlider" min="0" max="100" step="5" value="70" aria-label="통학 거리와 희망 병원의 비중">
-      <div class="hint">왼쪽은 희망 병원, 오른쪽은 통학 거리의 비중이 커집니다. 예시 값으로 계산한 화면이며 실제 데이터가 아닙니다.</div>
+      <div class="hint">왼쪽으로 갈수록 희망 병원, 오른쪽으로 갈수록 통학의 비중이 커집니다.</div>
     </div>
     <div id="dRows"></div>
   </div>
@@ -2333,7 +2352,7 @@ LANDING_PAGE = """<!DOCTYPE html>
 </div></section>
 
 <section id="steps" class="alt"><div class="wrap">
-  <div class="sec-h"><div class="tag">순서</div><h2>세 단계로 끝납니다</h2><p>조건을 정하고, 명단을 올리고, 추천안을 확인합니다.</p></div>
+  <div class="sec-h"><h2>세 단계로 끝납니다</h2><p>조건을 정하고, 명단을 올리고, 추천안을 확인합니다.</p></div>
   <div class="grid g3" style="margin-top:16px">
     <div class="card"><div class="ico">1</div><h3>조건 설정</h3><p>배정 방식, 교과목, 실습 기간, 거리와 희망의 비중, 병원별 정원을 정합니다.</p></div>
     <div class="card"><div class="ico">2</div><h3>명단 업로드</h3><p>엑셀이나 CSV 명단을 올립니다. 파일은 서버에 저장하지 않고 처리 후 사라집니다.</p></div>
@@ -2344,7 +2363,7 @@ LANDING_PAGE = """<!DOCTYPE html>
 </div></section>
 
 <section id="guide"><div class="wrap">
-  <div class="sec-h"><div class="tag">사용법</div><h2>처음 쓰는 분을 위한 안내</h2><p>자주 묻는 내용을 모았습니다.</p></div>
+  <div class="sec-h"><h2>처음 쓰는 분을 위한 안내</h2><p>자주 묻는 내용을 모았습니다.</p></div>
   __GUIDE_BTN__
   <div class="faq">
     <details><summary>학생 명단은 서버에 저장되나요?</summary><p>저장하지 않습니다. 올린 파일은 메모리에서 처리한 뒤 사라지고, 결과는 엑셀로 내려받아 보관합니다.</p></details>
@@ -2357,12 +2376,12 @@ LANDING_PAGE = """<!DOCTYPE html>
 </div></section>
 
 <section id="team" class="alt"><div class="wrap">
-  <div class="sec-h"><div class="tag">팀 로켓단</div><h2>만든 사람들</h2><p>안산대학교 간호학과 팀 로켓단입니다.</p></div>
+  <div class="sec-h"><h2>만든 사람들</h2><p>안산대학교 간호학과 팀 로켓단입니다.</p></div>
   <div class="team">
     <div class="mem"><img class="px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACEAAAAzCAYAAAAZ+mH/AAADdklEQVR42tVYTUhUURT+3jRIhGiIiyGcGMbJxkU2WJkKA2KzbCGWBi2GiAhxISaznIWLljLJW8RjaNPbqSktWhREGANqWoPlIsmfEUdjFiIpLkSE12J8z3vf3Pc7byY7m3d/zr33u+d+55z7LucPtsKCSHKhw7NPdUznqsgqZ2VSt1UA5OKemkrkdg8oUCdgJCtAXFYQswB4aio1dUoCghTZAvK3GHHhDMiZAGGFmJjOVSHg3gIA1NVS3oCtnTwXVo/rSgJCIisfIhFd5fr3y+pxhl7CmYgTkh3GE+7KFWsJiXRJPS8xmIMrxhJMK2zt7FOcYAGUwZmxhtuOmdWkzO0eFAArmXfIHsACYxeAZRDqhZICr6n7tG/AeRBJgacmPqyoUcrRgWGlLPLDpbWE1u7tLGw7bCcFHg1dcZy7eqegT6vdERCsndc3trGjJdGeFHhdzli2hNnJ7IphsAKAX2+f25q8oStu6rpnZAlq8OGnRapzLi5gLi5AT8eJ3EHJ+c4QVfcEAvA9iujqOOaifzY3mO0XOwOafU5ywjYvzPLBCISkN3Cef0LVWwZewQq/TB+HMPUOANDkrT6NjqksomEvMPua0p1ZSJ32nciP7B4AoK/7riVOSEbbiYa9EFNZDPl9VHtCBcDAspyuJWYWUgU7YQFJpIAh/3oewLpfFwA5Z/utsDOXGgeEsorbzBHoWUMum5HtTAYT46JS7+mNAoDE+YOt0gVfh+bARCJGEVMX2ItvEJ/dKDjOJm81tjMZAEDztSsAgPTSigLEsT8wMZVVvnKZtAAJYC0cRnX/YwDAxLiY58QlX7BoECFfFUI+7XumDKC+sQ1rP2eV9vTSSh7E741l5sD++yHHGUkCMJVFX75ZxOrMR0cWlznAajN00UB7BFNjkwCA7gf3NPX0yHu9YhPfjy4jvbTCJCbnD7ZKRsFKXmBqbFIXiFrUYXtiXMSX+TRutzSTLgq3KoRKtdufSbpRk1oBwJKe3ihisUFlcTlYlfORhGPUOSYniHuAkkW1ckipXmqoo5HPUgZDyuLGPoShh6b6jTK0y8B8nJM7jsUGMTIy+m+yaIVbnx+ucgBovtkCAOBHR5lH4yqHBdJf5/Ws8n88pkrFTH50bK7N8F+UlfXUf+FGOvIREAC4snuHavecZRdlpWAbOlzRTwMlyBuU/AV+2j+v68a6jwAAAABJRU5ErkJggg==" alt="강지우 캐릭터"><b>강지우</b><span>팀장</span></div>
     <div class="mem"><img class="px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAvCAYAAAD9/drQAAACqklEQVR42mNU0rBgwAH+M5AHGLEJsuCzhIeFNBu+/IHrxbCMCZcmUi0hpIeFUJAZmdkQtODcqSPYzEDxFSOWOPpPqm+MzGxQLIMGISNRQYcNvHnzAisfi48YiI4jagMmUnwjIiKBkz/0fITuelJ8Q9Cic2taGBgYGBh0pFjgNLIYTBwmhg8QlZAXTWogSoyioDu3poVBLaCGgVndGcOnyOKEfEV0HClrWpIkTlTQERPm+PSpBdRgFunYiiAGBgaGWxvIswzJEoJFEIqCH/suoEieqJnBcKJmBgM+NdiqCYKpjsPJAIUvoaLCoJDgglcNScn7w6MHWMUFnFRwyuGtdnFU5WTFE674wWYR3nbCqUkpKHyzvDlEtx8wgm7Gui0MDAwMDHqy/IhS4PBjhjhbWQaG4wtR1B47fRghBwWXHn9kYGBgYMgI8sGII4KtnThbWYZFhx8zFCkpoIj3oVmCr1nAqKRh8f/Y6cMYLkL2EbLPipTuQSy5pwS3ZN3KtSjqVKxcUPRbmdoysJCTKfdtWcBgwMDAcOkaLCmiBhPDtgKGS5RUfHG2sgx995TIKjFI9lGcrSzDpWsMDK7Fi+FirhiqwuGs3b2x9K3KWSjR3L39Pk65TV9mMRwObaeORaWeirjlGNop85HI04MMTj4JDH9v7sWZMEo9FRmeBwYySK5fT3sfiXXkMPy9uZfBySeBgWFODcQiK1NbjCKIkjiKmVXEINaRgxF0jKR0vt5I2zNcmpnI4Fq8mKFUHYciz/UMf2/upV6qwwdgrSNYPsJpEazMoxbAWR9hi6sLDz4xzCiKYpiRokKSJRlz7mD4iJGYuMqYcwevQ6heMpDSMx983ZYhbdF/Kpj7n6i2993rxwn2KohQwzggQYe923L5NuEuChFqiOq2UDsvAQDmxOC3ExOgygAAAABJRU5ErkJggg==" alt="최영락 캐릭터"><b>최영락</b><span>팀원</span></div>
     <div class="mem"><img class="px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB0AAAAwCAYAAADtoXHnAAACzklEQVR42u1YP2gTURj/XbihFLElZJBohmoqOrRDiLEWskkGJ0nRVodwk2MQ6eTQwcGpIGQqnY4MkjTkJnHQbgdRmnBIExFMA0KkUwmpBHHyHOw73728u3t3SbD++eDg7vu+937fv/e99066eGUJDmQiGEleCrIbYOhb3xfa96lZMtYVOOQo4AD2+j1XUFEjQ0HCqih5KEreTcV1DomTU5O1WFHyUNUCev0ewrNhGx8AVLXAC7MUGJQAkvDSoDydsYDS+eQBuhSU5LuQWBIFDFpIE6fTDdoobQjxhFqWSCGlLkes972PR1xeo7SB5NoTtpBMXouU/Xrng0wAqOwUAQB37uasFhkSAUwoBcxcvzekw/JZIys7RSQW5pFYmLfAAZghUQ8vXb3BNY7lk7EE0DKQAv4t1cstJAAw1HygCRPKz3ZoqHl0ppOWt0azTfLK9dTWvozSS5uwtamhtanBTccK/dcGjGbbBghAkj0tX7tl+z4XjyNye9FVhwUm3nsumaPDz3xBKuwso+h5K4Ts6srJV8EWQUfQzGPNd14pj3ydkWwdpDOdpHOBV0+zQ4bRa5LQ+vpDykuBg9mW9gIAsBibsSYYRFPIpWMYvH5m063VdRT1Ls4c7uH83BxqdR373WMc1HY9G75JPVzKpWMo6l1EohdsT1HvIpeO2XQParuIL9/0Dm+trluM/e6xI/C2DjwIvwUAbPeWhgDHtrVlV1eglauOcq1ctfKnlaueXnruMk7ekvegJPsd4ARGPHZKj29QEmJ2GZCwa+UqBtGUTbZ8LT26pywwAfTIoTRyeOmiEg3lWHLq1mkmBkoT6Vp/xLlXBoCp95VfnLOZv/OEL7P74JaWce3BkziYmewWR9O7T1+w9ei+kNzPOpVG/LMi9Ifl/1Xx3wA1xzCv//9InQ9vnE/sJ7c0AR3p9HUkloxm23OgiI7vq+I4up2T4AfMHhxmQ6yU0AAAAABJRU5ErkJggg==" alt="정현민 캐릭터"><b>정현민</b><span>팀원</span></div>
-    <div class="mem"><img class="px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAxCAYAAADJP8l8AAADCElEQVR42r1YTWgTQRT+VkPpoYdYAoYQ2xKlRrEFMbRpQUELsSBIKihBEIr0HBQ8KJQQtaAHTznvwVMpCpqjFFFRTE31EKyaWJKSlhCWEiSHHIJo1kO66+44M5ndbHyX3Z03M9987837SaRAMAyGqLAnEk/p4oH5oVhCqsCrrWWC7iNAVLtgxBrTXkyGfijaKXWJhI8zAVY/fOOCk3sBgGTwoWqVlXYYFvAeoCTiQyHhMRTxYUcTWmUuBNhrsWzSV2mZqTsXXbBuUrtgjjI8ExpHcjFO1SWXUtbSEC8srDIiTSocFkq9Aa97AAvJFdO4nIzp76Tube4L/Ia1tkwqJ2MYjS4CADbTSyYQmm4rp3R/aUr5NUy7m1SWpM5W4JNybeokpk8ELOtsATZqTbhGQlhvDKJRa+rs5GSMqbMVFuvpCC7OZzDg6WduxNMJM9TKyUR0FQDQytWAaqvzLtVWey5lL14cdozFzYcvTLrR27OWYpAKqJs1xciLn3+1n+P0iJqIy9z+RmI0UaoWX0ap75RN3+6hETPjvbjk9TRMhtTLRLAm2Ah1cC4SpJRfo67MbmwDykvT2PKTFUyODVPnHz42RRKQ9LDgLTRK2ReB3+dpX4pqDWi1uBlKO+jVKzF79dDv86D/xyP9/b9U/ObgLdP3nacF0/eDy0FnKv7k2DDKld2/5q3sCrmha4akdGJERkDXgEY5fXaOOu7zttNcVVGcBQSAeOoxdTwVn7dm0uzGNnWM5cdLfZ/092c/Q/bCwri5nQtjy4eVarsMHTxwiDvPyEooLM7fz1LHE3IGCTnjbCOs+Ut7Gs2nlAvdd96hviJ+fy8CAPYfnQEA3Iv+W7FPzd1FvdAuwhduBpG4Hmbexp4FvlHevX5OVgs6oKFwopSfcfIM1HookenH7pV3pBHu+Q9SWkaxmoEsAWrVOTh7A0cCQyhu7TAXL7+pmvRKuaDfYlFAqcu/vTp2bVwf8tiJ6EUBVQfuhiralwKAymoVjQEtMEcSzjTvP37tSEFkjjDDXmUZAPgDFuQhjuV0nZQAAAAASUVORK5CYII=" alt="강민정 교수님 캐릭터"><b>강민정 교수님</b><span>지도교수 · 간호관리학</span></div>
+    <div class="mem"><img class="px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAxCAYAAADJP8l8AAADCElEQVR42r1YTWgTQRT+VkPpoYdYAoYQ2xKlRrEFMbRpQUELsSBIKihBEIr0HBQ8KJQQtaAHTznvwVMpCpqjFFFRTE31EKyaWJKSlhCWEiSHHIJo1kO66+44M5ndbHyX3Z03M9987837SaRAMAyGqLAnEk/p4oH5oVhCqsCrrWWC7iNAVLtgxBrTXkyGfijaKXWJhI8zAVY/fOOCk3sBgGTwoWqVlXYYFvAeoCTiQyHhMRTxYUcTWmUuBNhrsWzSV2mZqTsXXbBuUrtgjjI8ExpHcjFO1SWXUtbSEC8srDIiTSocFkq9Aa97AAvJFdO4nIzp76Tube4L/Ia1tkwqJ2MYjS4CADbTSyYQmm4rp3R/aUr5NUy7m1SWpM5W4JNybeokpk8ELOtsATZqTbhGQlhvDKJRa+rs5GSMqbMVFuvpCC7OZzDg6WduxNMJM9TKyUR0FQDQytWAaqvzLtVWey5lL14cdozFzYcvTLrR27OWYpAKqJs1xciLn3+1n+P0iJqIy9z+RmI0UaoWX0ap75RN3+6hETPjvbjk9TRMhtTLRLAm2Ah1cC4SpJRfo67MbmwDykvT2PKTFUyODVPnHz42RRKQ9LDgLTRK2ReB3+dpX4pqDWi1uBlKO+jVKzF79dDv86D/xyP9/b9U/ObgLdP3nacF0/eDy0FnKv7k2DDKld2/5q3sCrmha4akdGJERkDXgEY5fXaOOu7zttNcVVGcBQSAeOoxdTwVn7dm0uzGNnWM5cdLfZ/092c/Q/bCwri5nQtjy4eVarsMHTxwiDvPyEooLM7fz1LHE3IGCTnjbCOs+Ut7Gs2nlAvdd96hviJ+fy8CAPYfnQEA3Iv+W7FPzd1FvdAuwhduBpG4Hmbexp4FvlHevX5OVgs6oKFwopSfcfIM1HookenH7pV3pBHu+Q9SWkaxmoEsAWrVOTh7A0cCQyhu7TAXL7+pmvRKuaDfYlFAqcu/vTp2bVwf8tiJ6EUBVQfuhiralwKAymoVjQEtMEcSzjTvP37tSEFkjjDDXmUZAPgDFuQhjuV0nZQAAAAASUVORK5CYII=" alt="강민정 교수님 캐릭터"><b>강민정 교수님</b><span>지도교수, 간호관리학</span></div>
   </div>
 </div></section>
 
@@ -2375,10 +2394,10 @@ LANDING_PAGE = """<!DOCTYPE html>
 </div></section>
 </main>
 
-<footer><div class="wrap">
+<footer><div class="wrap foot">
+  <div><b>로켓단</b><span>AI기반 간호실습 배치 의사결정 프로그램</span><span>안산대학교 간호학과 캡스톤디자인</span></div>
+  <div><span>팀원 강지우(팀장), 최영락, 정현민</span><span>지도교수 강민정</span></div>
   <div class="links"><a href="/app">배정 시스템 열기</a>__GUIDE_FOOT__</div>
-  <b style="color:var(--navy)">로켓단</b> · AI기반 간호실습 배치 의사결정 프로그램<br>안산대학교 간호학과 캡스톤디자인 작품 · 팀원 강지우(팀장), 최영락, 정현민 · 지도교수 강민정
-  <div class="keyhint">키보드 숫자 1~9를 누르면 해당 구역으로 이동합니다.</div>
 </div></footer>
 <script>
 (function () {
@@ -2429,24 +2448,7 @@ LANDING_PAGE = """<!DOCTYPE html>
     mark('intro');
   }
 
-  /* 숫자 올라가는 효과 */
-  var els = document.querySelectorAll('.cnt');
-  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (still || !('IntersectionObserver' in window)) return;
-  function run(el) {
-    var to = +el.getAttribute('data-n'), t0 = null;
-    function step(ts) {
-      if (t0 === null) t0 = ts;
-      var k = Math.min(1, (ts - t0) / 1100), e = 1 - Math.pow(1 - k, 3);
-      el.textContent = Math.round(to * e);
-      if (k < 1) requestAnimationFrame(step); else el.textContent = to;
-    }
-    el.textContent = '0'; requestAnimationFrame(step);
-  }
-  var io = new IntersectionObserver(function (es) {
-    es.forEach(function (e) { if (e.isIntersecting) { run(e.target); io.unobserve(e.target); } });
-  }, {threshold: 0.6});
-  els.forEach(function (el) { io.observe(el); });
+
 })();
 </script>
 </body>
