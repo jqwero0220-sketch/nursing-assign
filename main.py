@@ -1311,6 +1311,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .btn-sm { min-height:38px; padding:0 16px; font-size:13.5px; border-radius:10px; box-shadow:0 2px 0 var(--ink); }
   .btn-sm:hover { box-shadow:0 4px 0 var(--ink); }
   .btn.busy::before { content:''; width:16px; height:16px; border-radius:50%; border:3px solid rgba(12,26,58,.25); border-top-color:var(--ink); animation:spin .8s linear infinite; }
+  @keyframes sheetUp { from { transform:translateY(40px); opacity:0; } to { transform:none; opacity:1; } }
   @keyframes spin { to { transform:rotate(360deg); } }
   .actions { display:flex; justify-content:space-between; gap:12px; margin-top:30px; flex-wrap:wrap; }
 
@@ -1504,7 +1505,10 @@ HTML_PAGE = r"""<!DOCTYPE html>
     .tabs { padding:0 10px; }
     .tab { padding:14px 12px; font-size:14px; }
     .actions .btn { flex:1; }
-    .sheet { padding:0 18px 22px; }
+    .modal { align-items:flex-end; padding:0; }
+    .sheet { padding:0 18px 22px; border-radius:20px 20px 0 0; max-height:88vh; animation:sheetUp .32s var(--ease); }
+    .sheet::before { content:''; display:block; width:44px; height:5px; border-radius:99px; background:rgba(12,26,58,.22); margin:10px auto 0; }
+    .sheet h3 { margin-top:18px; }
   }
   @media (prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none !important; animation:none !important; } .btn.busy::before { border-top-color:var(--ink); } }
 </style>
