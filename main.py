@@ -1466,7 +1466,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .sheet { background:#fff; border-radius:18px; width:100%; max-width:580px; max-height:92vh; overflow:auto; padding:0 28px 28px; box-shadow:0 28px 70px rgba(0,0,0,.35); position:relative; }
   .sheet-top { display:flex; align-items:center; gap:12px; padding:24px 0 16px; margin-bottom:16px; border-bottom:3px dashed rgba(12,26,58,.2); }
   .sheet-top .bcs { height:26px; width:132px; color:var(--ink); }
-  .sheet h3 { margin:0; font-size:23px; font-weight:850; letter-spacing:-.04em; color:var(--ink); }
+  .sheet h3 { margin:30px 0 0; font-size:23px; font-weight:850; letter-spacing:-.04em; color:var(--ink); }
   .sheet .x { position:absolute; right:18px; top:16px; border:none; background:var(--liner); width:38px; height:38px; border-radius:50%; font-size:22px; line-height:1; cursor:pointer; transition:background .15s, transform .15s var(--ease); }
   .sheet .x:hover { background:var(--blue-l); transform:rotate(90deg); }
   .box { background:var(--liner); border-radius:12px; padding:16px 18px; margin-top:14px; }
@@ -2089,7 +2089,6 @@ function openDetail(i) {
     : (r.is_top_choice === true ? '이 학생에게 가장 점수가 높은 병원에 배정되었습니다.' : '');
   const hasMap = r.s_ll && r.h_ll;
   $('sheet').innerHTML = `<button class="x" onclick="closeModal()" aria-label="닫기">×</button>
-    <div class="sheet-top" aria-hidden="true">${barcode(r.student_id + r.name)}</div>
     <h3>${esc(mName(r.name))} <span class="sub" style="font-weight:500">${esc(mId(r.student_id))}</span></h3>
     <div class="sub">${esc(r.gender)} · GPA ${esc(r.gpa)} · ${esc(r.birth_year)}년생 · ${esc(r.address || '주소 없음')}</div>
     <div class="box" style="background:var(--blue-l)"><b style="color:var(--blue-d)">${esc(r.hospital)}</b> · 병원 내 ${esc(r.rank)}순위 · 종합 <b>${esc(r.composite_score)}점</b></div>
@@ -2473,7 +2472,6 @@ LANDING_PAGE = r"""<!DOCTYPE html>
       <p class="sub">통학 거리와 희망 병원을 함께 계산해 배정안을 추천하고, 근거까지 보여 줍니다. 최종 결정은 교수자가 합니다.</p>
       <p class="fact">가상 학생 221명 시험에서 평균 통학시간이 56.7분에서 35분으로 줄었습니다.</p>
       <div class="cta"><a class="btn" href="/app">배정 시스템 열기</a><a class="btn ghost" href="#start">비중 바꿔 보기</a></div>
-      <svg class="bc" data-bc="로켓단-221" viewBox="0 0 120 26" preserveAspectRatio="none" aria-hidden="true"></svg>
     </div>
     <div class="roll" aria-label="배정 결과 예시(가상 학생 데이터, 이름·학번 일부 가림)">
       <article class="lb st" style="--i:0"><div class="st-top"><b class="st-h">고려대학교구로병원</b><span class="st-sc">91.6</span></div><div class="st-id">김○수 · 202○○○07</div><div class="st-tags"><span class="tag hit">1지망</span><span class="tag">통학 약 24분</span></div></article>
@@ -2556,7 +2554,6 @@ LANDING_PAGE = r"""<!DOCTYPE html>
       <div class="row"><span><i class="d" style="background:var(--gold)"></i>지망 점수 100 (1지망 일치) × 30%</span><b>30.0</b></div>
       <div class="row" style="border-bottom:0"><b>종합 매칭점수</b><b>70.1</b></div>
       <div class="small">예시 화면입니다. 비중은 슬라이더로 바꿀 수 있습니다.</div>
-      <svg class="bc" data-bc="종합-70.1" viewBox="0 0 120 26" preserveAspectRatio="none" aria-hidden="true"></svg>
     </div>
   </div>
 </div></section>
