@@ -2,6 +2,7 @@
 AI기반 간호실습 배치 의사결정 프로그램
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v13.2 대중교통 조회 기준을 평일 오전 6시 출발로 변경(07시 실습 시작 기준, 환경변수 COMMUTE_TIME으로 조절)
   v13.1 소개 페이지 맨 위에 버전 표시
   v13.0 소개 페이지 새 디자인(팀 캐릭터·실제 화면·개발 이유, 포스터와 같은 파란색)
   v12.2 소개 페이지 정리(업데이트 내역 제거, 예시 표 단순화, 버튼 문구 통일, 개선 효과·팀 정보 표시)
@@ -72,7 +73,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response, Streami
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v13.1"
+APP_VERSION = "v13.2"
 app = FastAPI(title=f"AI기반 간호실습 배치 의사결정 프로그램 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -310,11 +311,17 @@ TMAP_APP_KEY = os.environ.get("TMAP_APP_KEY", "")
 TMAP_TRANSIT_URL = "https://apis.openapi.sk.com/transit/routes"
 TRANSIT_AVAILABLE = bool(NAVER_KEY_ID and NAVER_KEY_SECRET)          # 네이버 키만 있어도 사용 가능
 TRANSIT_MODE = "tmap" if TMAP_APP_KEY else "line"                   # tmap: 실제 대중교통 / line: 좌표 직선거리 추정
+# 대중교통 조회 출발 시각(HHMM). 실습 07:00 시작 → 06:00 출발 기준. Render 환경변수 COMMUTE_TIME 으로 변경 가능
+COMMUTE_TIME = (os.environ.get("COMMUTE_TIME", "0600").strip().replace(":", "") or "0600").zfill(4)[:4]
+if not (COMMUTE_TIME.isdigit() and int(COMMUTE_TIME[:2]) < 24 and int(COMMUTE_TIME[2:]) < 60):
+    COMMUTE_TIME = "0600"
+COMMUTE_LABEL = f"평일 오전 {int(COMMUTE_TIME[:2])}시" + (f" {int(COMMUTE_TIME[2:])}분" if COMMUTE_TIME[2:] != "00" else "") + " 출발"
 LINE_BASE_MIN, LINE_MIN_PER_KM = 12, 2.0   # 직선거리 추정식: 통학(분) = 12 + 2.0 × 직선거리(km)  (실측과 비교해 조정 가능)
 
 
 def _rkey(dong: str, hosp_addr: str) -> str:
-    return f"{TRANSIT_MODE}|{dong}||{hosp_addr}"
+    tag = f"{TRANSIT_MODE}@{COMMUTE_TIME}" if TRANSIT_MODE == "tmap" else TRANSIT_MODE   # 출발 시각이 바뀌면 다시 조회
+    return f"{tag}|{dong}||{hosp_addr}"
 
 
 def haversine_km(a: Tuple[float, float], b: Tuple[float, float]) -> float:
@@ -431,12 +438,12 @@ def geocode(query: str) -> Optional[Tuple[float, float]]:
 
 
 def commute_dttm() -> str:
-    """출근 시간대 기준(다음 평일 오전 8시, 한국시간). TMAP searchDttm 형식 yyyymmddhhmi."""
+    """출근 시간대 기준(다음 평일 COMMUTE_TIME, 한국시간). TMAP searchDttm 형식 yyyymmddhhmi."""
     kst = datetime.timezone(datetime.timedelta(hours=9))
     d = datetime.datetime.now(kst).date() + datetime.timedelta(days=1)
     while d.weekday() >= 5:
         d += datetime.timedelta(days=1)
-    return d.strftime("%Y%m%d") + "0800"
+    return d.strftime("%Y%m%d") + COMMUTE_TIME
 
 
 def fetch_route(dong: str, hosp_addr: str) -> Optional[dict]:
@@ -1011,7 +1018,7 @@ async def get_config():
     if TRANSIT_AVAILABLE:
         addr = load_hospital_addresses()
         missing = sum(1 for h in all_hospital_names() if norm_h(h) not in addr)
-    return {"transit_available": TRANSIT_AVAILABLE, "transit_mode": TRANSIT_MODE, "hospitals_missing_address": missing, "auth_required": AUTH_REQUIRED, "version": APP_VERSION, "map_key_id": NAVER_KEY_ID or ""}
+    return {"transit_available": TRANSIT_AVAILABLE, "transit_mode": TRANSIT_MODE, "hospitals_missing_address": missing, "auth_required": AUTH_REQUIRED, "version": APP_VERSION, "map_key_id": NAVER_KEY_ID or "", "commute_time": COMMUTE_TIME, "commute_label": COMMUTE_LABEL}
 
 
 @app.get("/api/v1/curriculum")
@@ -1749,7 +1756,7 @@ window.addEventListener('load', async () => {
   if (CONFIG.auth_required && !TOKEN) $('auth').style.display = 'flex';
   if (CONFIG.transit_available) {
     const m = CONFIG.hospitals_missing_address;
-    $('transitHint').textContent = '통학시간: ' + (CONFIG.transit_mode === 'tmap' ? 'TMAP 대중교통 소요시간 사용. ' : '지도 기반 예상 소요시간. ')
+    $('transitHint').textContent = '통학시간: ' + (CONFIG.transit_mode === 'tmap' ? 'TMAP 대중교통 소요시간 사용(' + (CONFIG.commute_label || '평일 오전 6시 출발') + ' 기준). ' : '지도 기반 예상 소요시간. ')
       + (m ? `병원 주소가 없는 ${m}곳은 규칙 기반 추정치를 씁니다. ` : '') + '첫 실행은 시간이 걸리며, 이후에는 저장된 값을 사용합니다.';
   } else {
     $('transitHint').textContent = '지도 키가 설정되지 않아 통학시간은 규칙 기반 추정치로 계산합니다.';
@@ -2028,7 +2035,7 @@ function openDetail(i) {
       <div class="eq"><span><i class="dot" style="background:var(--teal)"></i>통학 점수 ${num(r.dist_score)} × ${w.distance}%</span><b>${num(dc)}</b>
         <span><i class="dot" style="background:var(--amber)"></i>지망 점수 ${num(r.pref_score)} (${esc(r.preference_status)}) × ${w.preference}%</span><b>${num(pc)}</b>
         <span><b style="text-align:left">종합 매칭점수</b></span><b>${esc(r.composite_score)}</b></div></div>
-    <div class="box"><h4>통학 (${r.transit_source === 'TMAP' ? 'TMAP 대중교통 · 평일 오전 8시 기준' : (r.transit_source === '직선거리' ? '지도 기반 예상 소요시간' : '규칙 기반 추정')})</h4><div class="eq"><span>소요시간</span><b>${esc(r.travel_time_minutes)}분</b><span>환승</span><b>${esc(r.transfers)}회</b><span>피로지수(MFI)</span><b>${esc(r.fatigue_index)}</b><span>예상 만족도 지수</span><b>${esc(r.satisfaction_index)}</b></div></div>
+    <div class="box"><h4>통학 (${r.transit_source === 'TMAP' ? 'TMAP 대중교통 · ' + (CONFIG.commute_label || '평일 오전 6시 출발') + ' 기준' : (r.transit_source === '직선거리' ? '지도 기반 예상 소요시간' : '규칙 기반 추정')})</h4><div class="eq"><span>소요시간</span><b>${esc(r.travel_time_minutes)}분</b><span>환승</span><b>${esc(r.transfers)}회</b><span>피로지수(MFI)</span><b>${esc(r.fatigue_index)}</b><span>예상 만족도 지수</span><b>${esc(r.satisfaction_index)}</b></div></div>
     ${alts ? `<div class="box"><h4>다른 병원 배정 시 (병원을 누르면 지도 표시)</h4>${alts}</div>` : ''}
     ${note ? `<div class="hint" style="margin-top:12px">${note}</div>` : ''}`;
   $('modal').classList.add('open');
