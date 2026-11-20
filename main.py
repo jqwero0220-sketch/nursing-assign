@@ -2135,7 +2135,7 @@ LANDING_PAGE = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#3E5BB8">
 <title>AI기반 간호실습 배치 의사결정 프로그램 | 로켓단</title>
-<meta name="description" content="통학 거리와 학생 희망을 함께 계산해 간호학과 실습 병원 배정안을 추천합니다. 최종 결정은 교수자가 하고, 시스템은 근거를 설명합니다.">
+<meta name="description" content="통학 거리와 학생 희망을 함께 계산해, 학생에게 더 잘 맞는 간호학과 실습 병원을 추천합니다. 교수자는 근거를 보고 확정합니다.">
 <link rel="canonical" href="__BASE__/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="AI기반 간호실습 배치 의사결정 프로그램 | 로켓단">
@@ -2473,7 +2473,7 @@ LANDING_PAGE = r"""<!DOCTYPE html>
   <div class="hero-grid">
     <div class="lb lb-main">
       <h1>실습 병원 배정,<br>거리와 희망을<br>함께 계산합니다</h1>
-      <p class="sub">통학 거리와 희망 병원을 함께 계산해 배정안을 추천하고, 근거까지 보여 줍니다. 최종 결정은 교수자가 합니다.</p>
+      <p class="sub">통학 거리와 희망 병원을 함께 계산해 학생에게 더 잘 맞는 실습지를 추천하고, 그 근거까지 보여 줍니다. 확정은 교수자가 합니다.</p>
       <p class="fact">가상 학생 221명 시험에서 평균 통학시간이 56.7분에서 35분으로 줄었습니다.</p>
       <div class="cta"><a class="btn" href="/app">배정 시스템 열기</a><a class="btn ghost" href="#start">비중 바꿔 보기</a></div>
     </div>
@@ -2495,13 +2495,13 @@ LANDING_PAGE = r"""<!DOCTYPE html>
       <div class="viz v-pref" aria-hidden="true"><span class="tag hit">1지망</span><span class="tag hit">2지망</span><span class="tag hit">3지망</span><span class="split"><i style="width:70%;background:var(--blue)"></i><i style="width:30%;background:var(--gold)"></i></span></div></article>
     <article class="lb m3"><h3>근거를 보여 주는 결과</h3><p>학생마다 점수 계산 내역과 다른 병원이었을 때의 점수, 위치 지도를 확인할 수 있습니다.</p>
       <div class="viz v-score" aria-hidden="true"><div class="stack"><i style="width:40.1%;background:var(--blue)"></i><i style="width:30%;background:var(--gold)"></i></div><div class="row"><span>통학 40.1</span><span>지망 30.0</span><span>종합 70.1</span></div></div></article>
-    <article class="lb m4"><h3>최종 결정은 교수자</h3><p>시스템은 추천안을 제공하고, 검토와 확정은 교수자가 합니다.</p>
+    <article class="lb m4"><h3>학생에게 더 좋은 배정</h3><p>학생마다 더 잘 맞는 병원을 추천하고, 교수자는 근거를 보고 확정합니다.</p>
       <div class="viz v-sign" aria-hidden="true"><span>추천안</span><span class="arrow"></span><span class="last">교수자 확정</span></div></article>
   </div>
 </div></section>
 
 <section class="sh on-liner" id="compare"><div class="wrap">
-  <div class="sec-h"><h2>엑셀 수작업과 무엇이 다른가</h2><p>최종 결정은 그대로 교수자가 합니다. 계산과 근거 정리를 시스템이 돕습니다.</p></div>
+  <div class="sec-h"><h2>엑셀 수작업과 무엇이 다른가</h2><p>학생에게 더 맞는 배정을 찾고, 교수자는 근거를 보며 확정합니다. 계산과 정리는 시스템이 맡습니다.</p></div>
   <div class="lb cmp-wrap">
     <table class="cmp"><thead><tr><th scope="col"><span class="sr" style="position:absolute;left:-999px">항목</span></th><th scope="col">엑셀 수작업</th><th scope="col" class="us">로켓단</th></tr></thead><tbody>
       <tr><td>통학 거리</td><td class="old">학생 주소를 보고 사람이 판단</td><td class="new">지도 기반 거리와 소요시간을 자동 계산</td></tr>
@@ -2536,7 +2536,7 @@ LANDING_PAGE = r"""<!DOCTYPE html>
 </div></section>
 
 <section class="sh on-liner" id="service"><div class="wrap">
-  <div class="sec-h"><h2>시스템이 계산하고, 교수자가 결정합니다</h2><p>최적화 알고리즘(헝가리안 알고리즘)이 병원 정원 안에서 학생 전체의 점수 합이 가장 높은 조합을 찾습니다.</p></div>
+  <div class="sec-h"><h2>학생에게 더 맞게 계산하고, 교수자가 확정합니다</h2><p>최적화 알고리즘(헝가리안 알고리즘)이 병원 정원 안에서 학생 전체의 점수 합이 가장 높은 조합을 찾습니다.</p></div>
   <div class="svc">
     <div class="lb l">
       <h3>조건을 정하고 명단을 올리면,<br>추천안이 나옵니다</h3>
@@ -2614,7 +2614,7 @@ LANDING_PAGE = r"""<!DOCTYPE html>
 
 <section class="sh on-blue fin"><div class="wrap">
   <div class="lb final">
-    <div><h2>결정은 교수자가,<br>근거는 시스템이</h2><p>로켓단은 배정을 대신 결정하지 않습니다. 더 합리적으로 선택할 수 있도록 추천안과 그 이유를 제공합니다.</p></div>
+    <div><h2>더 좋은 실습지를,<br>더 공정하게</h2><p>통학 거리와 학생의 희망을 함께 계산해 학생마다 더 잘 맞는 실습지를 추천합니다. 교수자는 이유를 확인하고 확정합니다.</p></div>
     <a class="btn" href="/app">배정 시스템 열기</a>
   </div>
 </div></section>
