@@ -1373,23 +1373,23 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .res-top { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
   .res-top .meta { font-size:15px; color:var(--ink-2); }
   .res-top .meta b { color:var(--ink); }
-  .hero { background:var(--blue-l); color:var(--ink); border-radius:var(--r); padding:32px 34px; display:grid; grid-template-columns:1fr 1.25fr; gap:36px; align-items:center; box-shadow:var(--lift-s); }
-  .hero-t { margin:0 0 18px; font-size:20px; font-weight:850; letter-spacing:-.03em; color:var(--ink); }
+  .hero { background:var(--blue); color:#fff; border-radius:var(--r); padding:32px 34px; display:grid; grid-template-columns:1fr 1.25fr; gap:36px; align-items:center; box-shadow:var(--lift); }
+  .hero-t { margin:0 0 18px; font-size:20px; font-weight:850; letter-spacing:-.03em; color:#fff; }
   .bignums { display:flex; gap:30px; flex-wrap:wrap; }
   .bignum .n { font-size:46px; font-weight:900; line-height:1.05; letter-spacing:-.05em; }
   .bignum .n small { font-size:17px; font-weight:800; margin-left:2px; letter-spacing:-.02em; }
-  .bignum .t { font-size:13.5px; color:var(--muted); margin-top:6px; font-weight:650; }
-  .pos { color:var(--green); } .neg { color:var(--red); }
+  .bignum .t { font-size:13.5px; color:#E3E9FA; margin-top:6px; font-weight:650; }
+  .pos { color:var(--gold); } .neg { color:#FFC2CC; }
   .cmp-row { margin-bottom:16px; }
   .cmp-row:last-of-type { margin-bottom:6px; }
-  .cmp-row .cl { font-size:13px; color:var(--ink-2); margin-bottom:6px; font-weight:700; }
+  .cmp-row .cl { font-size:13px; color:#E3E9FA; margin-bottom:6px; font-weight:700; }
   .pbar { display:flex; align-items:center; gap:12px; margin-top:5px; font-size:13px; }
-  .pbar .tag { width:36px; color:var(--muted); flex:none; font-weight:700; }
-  .pbar .track { flex:1; height:14px; border-radius:99px; background:#fff; overflow:hidden; }
+  .pbar .tag { width:36px; color:#E3E9FA; flex:none; font-weight:700; }
+  .pbar .track { flex:1; height:14px; border-radius:99px; background:rgba(255,255,255,.2); overflow:hidden; }
   .pbar .fill { height:100%; border-radius:99px; transition:width .9s var(--ease); }
-  .pbar .fill.base { background:#B9C4E4; } .pbar .fill.ours { background:var(--gold); }
+  .pbar .fill.base { background:rgba(255,255,255,.55); } .pbar .fill.ours { background:var(--gold); }
   .pbar .val { width:68px; text-align:right; font-weight:800; flex:none; font-variant-numeric:tabular-nums; }
-  .cmp-note { font-size:12.5px; color:var(--muted); margin-top:12px; }
+  .cmp-note { font-size:12.5px; color:#E3E9FA; margin-top:12px; }
 
   .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:12px 0; }
   .kpi { background:#fff; border-radius:var(--r); padding:20px 22px 18px; box-shadow:var(--lift-s); }
@@ -2193,12 +2193,14 @@ LANDING_PAGE = r"""<!DOCTYPE html>
   /* 구역(라벨 시트 한 장 = 한 화면) */
   main > section.sh { min-height:100vh; min-height:100svh; display:flex; flex-direction:column; justify-content:center; padding:112px 0 72px; scroll-snap-align:start; }
   main > section.sh.hero { min-height:calc(100svh - 34px); }
-  .on-blue { background:var(--blue-l); color:var(--ink); }
+  main > section.sh#steps, main > section.sh.fin, main > section.sh#team { min-height:0; padding:120px 0 104px; }
+  .on-blue { background:var(--blue); color:#fff; }
+  .on-white { background:#fff; color:var(--ink); }
   .on-liner { background:var(--liner); color:var(--ink); }
   .sec-h { margin-bottom:34px; max-width:46em; }
   .sec-h h2 { font-size:clamp(30px,3.7vw,50px); line-height:1.16; font-weight:850; letter-spacing:-.04em; }
   .sec-h p { margin-top:14px; font-size:18px; line-height:1.6; color:var(--muted); max-width:36em; }
-  .on-blue .sec-h p { color:var(--muted); }
+  .on-blue .sec-h p { color:#E3E9FA; }
 
   /* 라벨: 이 페이지의 유일한 카드 형태 */
   .lb { background:#fff; color:var(--ink); border-radius:var(--r); padding:28px; box-shadow:var(--lift-s); position:relative; }
@@ -2283,7 +2285,7 @@ LANDING_PAGE = r"""<!DOCTYPE html>
   .zero { display:flex; align-items:baseline; gap:6px; }
   .zero b { font-size:46px; font-weight:900; letter-spacing:-.05em; line-height:1; color:var(--blue); font-variant-numeric:tabular-nums; }
   .zero > span { font-size:17px; font-weight:700; color:var(--ink-2); }
-  .on-blue .note { margin-top:18px; font-size:14px; color:var(--muted); max-width:60em; }
+  .on-blue .note { margin-top:18px; font-size:14px; color:#E3E9FA; max-width:60em; }
 
   /* 5. 주요 기능 */
   .svc { display:grid; grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:12px; align-items:stretch; }
@@ -2338,7 +2340,7 @@ LANDING_PAGE = r"""<!DOCTYPE html>
   .strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); padding:0; }
   .stp { position:relative; padding:36px 38px 40px; min-height:236px; display:flex; flex-direction:column; }
   .stp + .stp { border-left:3px dashed rgba(12,26,58,.28); }
-  .stp + .stp::before, .stp + .stp::after { content:''; position:absolute; left:-12px; width:22px; height:22px; border-radius:50%; background:var(--blue-l); }
+  .stp + .stp::before, .stp + .stp::after { content:''; position:absolute; left:-12px; width:22px; height:22px; border-radius:50%; background:var(--liner); }
   .stp + .stp::before { top:-11px; } .stp + .stp::after { bottom:-11px; }
   .stp .n { width:46px; height:46px; border-radius:50%; background:var(--gold); color:var(--ink); border:2px solid var(--ink); font-size:21px; font-weight:900; display:grid; place-items:center; margin-bottom:22px; font-variant-numeric:tabular-nums; }
   .stp h3 { font-size:22px; font-weight:800; letter-spacing:-.03em; }
@@ -2509,7 +2511,7 @@ LANDING_PAGE = r"""<!DOCTYPE html>
   </div>
 </div></section>
 
-<section class="sh on-blue" id="numbers"><div class="wrap">
+<section class="sh on-white" id="numbers"><div class="wrap">
   <div class="sec-h"><h2>숫자로 보는 로켓단</h2><p>가상 학생 221명 · 4학년 1학기 관리 실습 9개 병원으로, 정원만 지킨 무작위 배정 100회 평균과 비교했습니다.</p></div>
   <div class="lb res" id="resBox">
     <div class="rrow"><h3>평균 통학시간</h3>
@@ -2574,7 +2576,7 @@ LANDING_PAGE = r"""<!DOCTYPE html>
   </div>
 </div></section>
 
-<section class="sh on-blue" id="steps"><div class="wrap">
+<section class="sh on-liner" id="steps"><div class="wrap">
   <div class="sec-h"><h2>세 단계로 끝납니다</h2><p>조건을 정하고, 명단을 올리고, 추천안을 확인합니다.</p></div>
   <div class="lb strip">
     <article class="stp"><div class="n">1</div><h3>조건 설정</h3><p>배정 방식, 교과목, 실습 기간, 거리와 희망의 비중, 병원별 정원을 정합니다.</p></article>
