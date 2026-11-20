@@ -2,6 +2,7 @@
 AI기반 간호실습 배치 의사결정 프로그램
 
 버전 기록 (수정할 때마다 APP_VERSION 을 올립니다)
+  v12.2 소개 페이지 정리(업데이트 내역 제거, 예시 표 단순화, 버튼 문구 통일, 개선 효과·팀 정보 표시)
   v12.1 화면 문구에서 "직선거리" 표현 정리(통학은 "지도 기반 예상 소요시간"으로 표시)
   v12.0 프로그램 이름을 "AI기반 간호실습 배치 의사결정 프로그램"으로 변경(팀 이름 로켓단은 유지)
   v11.9 소개 페이지 구역마다 화면 높이에 맞게 꽉 채우고 가운데 정렬(영상 촬영용)
@@ -69,7 +70,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response, Streami
 from pydantic import BaseModel
 from scipy.optimize import linear_sum_assignment
 
-APP_VERSION = "v12.1"
+APP_VERSION = "v12.2"
 app = FastAPI(title=f"AI기반 간호실습 배치 의사결정 프로그램 ({APP_VERSION})")
 
 # ──────────────────────────────────────────────────────────────
@@ -2110,6 +2111,7 @@ LANDING_PAGE = """<!DOCTYPE html>
   .stat .big small { font-size:16px; color:var(--muted); font-weight:700; }
   .stat .from { color:var(--muted); font-size:13px; min-height:20px; }
   .stat .t { font-weight:700; margin-top:6px; font-size:15px; }
+  .stat .gain { display:inline-block; margin-top:10px; font-size:13px; font-weight:800; color:var(--teal-d); background:#ccfbf1; padding:3px 10px; border-radius:99px; }
   .note { font-size:13px; color:var(--muted); margin-top:16px; text-align:center; }
   .svc { display:grid; grid-template-columns:1.1fr 1fr; gap:28px; align-items:center; background:#fff; border:1px solid var(--line); border-radius:18px; padding:32px; }
   .svc h3 { font-size:24px; margin:0 0 10px; }
@@ -2199,7 +2201,7 @@ LANDING_PAGE = """<!DOCTYPE html>
     .svc { grid-template-columns:1fr; }
   }
   @media (max-width:640px) {
-    .mk-kpis { grid-template-columns:1fr; } .mock-body { padding:12px; overflow-x:auto; } .mk-tbl { min-width:560px; } .cmp th, .cmp td { padding:12px; font-size:14px; }
+    .mk-kpis { grid-template-columns:1fr; } .mock-body { padding:12px; overflow-x:auto; } .mk-tbl { font-size:12px; } .mk-tbl .mh, .mk-tbl th:nth-child(3), .mk-tbl td:nth-child(3) { display:none; } .mk-tbl td, .mk-tbl th { padding:8px 4px; } .cmp th, .cmp td { padding:12px; font-size:14px; }
     .hero { padding:56px 0 48px; } .hero h1 { font-size:31px; } .hero p { font-size:16px; }
     .g3, .g2, .g4 { grid-template-columns:1fr; } .nav a.hide { display:none; } section { padding:48px 0; }
     .nav { gap:14px; } h2 { font-size:25px; } .stat .big { font-size:30px; }
@@ -2210,11 +2212,11 @@ LANDING_PAGE = """<!DOCTYPE html>
 <div class="notice">캡스톤디자인 작품 · 학생 명단 파일은 서버에 저장되지 않습니다</div>
 <header class="top"><div class="wrap top-in">
   <a class="logo" href="/">로켓단</a>
-  <nav class="nav"><a class="hide" href="#intro">소개</a><a class="hide" href="#guide">사용법</a><a class="hide" href="#steps">순서</a><a class="btn sm" href="/app">서비스 시작하기</a></nav>
+  <nav class="nav"><a class="hide" href="#intro">소개</a><a class="hide" href="#steps">순서</a><a class="hide" href="#guide">자주 묻는 질문</a><a class="btn sm" href="/app">배정 시스템 열기</a></nav>
 </div></header>
 
 <main>
-<nav class="dots" aria-label="구역 이동"><a href="#intro" data-s="intro" title="소개" aria-label="소개"><span>소개<kbd>1</kbd></span></a><a href="#why" data-s="why" title="왜 필요한가" aria-label="왜 필요한가"><span>왜 필요한가<kbd>2</kbd></span></a><a href="#compare" data-s="compare" title="비교" aria-label="비교"><span>비교<kbd>3</kbd></span></a><a href="#numbers" data-s="numbers" title="시험 결과" aria-label="시험 결과"><span>시험 결과<kbd>4</kbd></span></a><a href="#service" data-s="service" title="주요 서비스" aria-label="주요 서비스"><span>주요 서비스<kbd>5</kbd></span></a><a href="#start" data-s="start" title="서비스 시작하기" aria-label="서비스 시작하기"><span>서비스 시작하기<kbd>6</kbd></span></a><a href="#guide" data-s="guide" title="사용법" aria-label="사용법"><span>사용법<kbd>7</kbd></span></a><a href="#steps" data-s="steps" title="순서" aria-label="순서"><span>순서<kbd>8</kbd></span></a><a href="#news" data-s="news" title="소식" aria-label="소식"><span>소식<kbd>9</kbd></span></a></nav>
+<nav class="dots" aria-label="구역 이동"><a href="#intro" data-s="intro" title="소개" aria-label="소개"><span>소개<kbd>1</kbd></span></a><a href="#why" data-s="why" title="왜 필요한가" aria-label="왜 필요한가"><span>왜 필요한가<kbd>2</kbd></span></a><a href="#compare" data-s="compare" title="비교" aria-label="비교"><span>비교<kbd>3</kbd></span></a><a href="#numbers" data-s="numbers" title="시험 결과" aria-label="시험 결과"><span>시험 결과<kbd>4</kbd></span></a><a href="#service" data-s="service" title="주요 기능" aria-label="주요 기능"><span>주요 기능<kbd>5</kbd></span></a><a href="#start" data-s="start" title="직접 해보기" aria-label="직접 해보기"><span>직접 해보기<kbd>6</kbd></span></a><a href="#steps" data-s="steps" title="순서" aria-label="순서"><span>순서<kbd>7</kbd></span></a><a href="#guide" data-s="guide" title="자주 묻는 질문" aria-label="자주 묻는 질문"><span>자주 묻는 질문<kbd>8</kbd></span></a></nav>
 <div class="hero" id="intro"><div class="wrap">
   <div class="eyebrow">AI기반 간호실습 배치 의사결정 프로그램</div>
   <h1>실습 배정의 모든 과정,<br>거리와 희망으로 스마트하게</h1>
@@ -2228,11 +2230,11 @@ LANDING_PAGE = """<!DOCTYPE html>
         <div class="mk-kpi"><small>평균 통학시간</small><b>35분</b></div>
         <div class="mk-kpi"><small>지망 충족률</small><b>76%</b></div>
       </div>
-      <table class="mk-tbl"><thead><tr><th>순위</th><th class="l">병원</th><th>학번</th><th>이름</th><th>지망 반영</th><th>통학시간</th><th>종합점수</th></tr></thead><tbody>
-        <tr><td><span class="rk">1위</span></td><td class="l">고려대학교구로병원</td><td>202○○○07</td><td><b>김○수</b></td><td><span class="hit">1지망 일치</span></td><td><b>약 24분</b></td><td class="sc">91.6</td></tr>
-        <tr><td><span class="rk">1위</span></td><td class="l">순천향대학교부천병원</td><td>202○○○15</td><td><b>이○은</b></td><td><span class="hit">1지망 일치</span></td><td><b>약 18분</b></td><td class="sc">97.2</td></tr>
-        <tr><td><span class="rk">2위</span></td><td class="l">단원병원</td><td>202○○○31</td><td><b>박○준</b></td><td><span class="hit">2지망 일치</span></td><td><b>약 29분</b></td><td class="sc">77.9</td></tr>
-        <tr><td><span class="rk">3위</span></td><td class="l">아주대학교병원</td><td>202○○○42</td><td><b>최○린</b></td><td><span class="miss">비지망(기본)</span></td><td><b>약 21분</b></td><td class="sc">67.4</td></tr>
+      <table class="mk-tbl"><thead><tr><th class="l">배정 병원</th><th class="mh">학번</th><th>이름</th><th>지망</th><th>통학시간</th><th>종합점수</th></tr></thead><tbody>
+        <tr><td class="l">고려대학교구로병원</td><td class="mh">202○○○07</td><td><b>김○수</b></td><td><span class="hit">1지망</span></td><td><b>약 24분</b></td><td class="sc">91.6</td></tr>
+        <tr><td class="l">순천향대학교부천병원</td><td class="mh">202○○○15</td><td><b>이○은</b></td><td><span class="hit">1지망</span></td><td><b>약 18분</b></td><td class="sc">97.2</td></tr>
+        <tr><td class="l">단원병원</td><td class="mh">202○○○31</td><td><b>박○준</b></td><td><span class="hit">2지망</span></td><td><b>약 29분</b></td><td class="sc">77.9</td></tr>
+        <tr><td class="l">아주대학교병원</td><td class="mh">202○○○42</td><td><b>최○린</b></td><td><span class="miss">지망 외</span></td><td><b>약 21분</b></td><td class="sc">67.4</td></tr>
       </tbody></table>
     </div>
     <div class="mock-cap">화면 예시입니다. 가상 학생 데이터이고, 이름과 학번은 일부를 가렸습니다.</div>
@@ -2261,18 +2263,18 @@ LANDING_PAGE = """<!DOCTYPE html>
 </div></section>
 
 <section id="numbers"><div class="wrap">
-  <div class="sec-h"><div class="tag">시험 결과</div><h2>숫자로 보는 로켓단</h2><p>가상 학생 명단으로 시험한 결과입니다.</p></div>
+  <div class="sec-h"><div class="tag">시험 결과</div><h2>숫자로 보는 로켓단</h2><p>가상 학생 221명 · 4학년 1학기 관리 실습 9개 병원으로, 정원만 지킨 무작위 배정 100회 평균과 비교했습니다.</p></div>
   <div class="stats">
-    <div class="stat"><div class="from">&nbsp;</div><div class="big"><span class="cnt" data-n="221">221</span><small> 명</small></div><div class="t">시험한 가상 학생 수</div></div>
-    <div class="stat"><div class="from">&nbsp;</div><div class="big"><span class="cnt" data-n="9">9</span><small> 곳</small></div><div class="t">4학년 1학기 관리 실습 병원</div></div>
-    <div class="stat"><div class="from">무작위 배정 56.7분</div><div class="big"><span class="cnt" data-n="35">35</span><small> 분</small></div><div class="t">평균 통학시간</div></div>
-    <div class="stat"><div class="from">무작위 배정 19.4%</div><div class="big"><span class="cnt" data-n="76">76</span><small> %</small></div><div class="t">지망 충족률</div></div>
+    <div class="stat"><div class="from">무작위 배정 56.7분</div><div class="big"><span class="cnt" data-n="35">35</span><small> 분</small></div><div class="t">평균 통학시간</div><div class="gain">21.7분 단축 (−38%)</div></div>
+    <div class="stat"><div class="from">무작위 배정 19.4%</div><div class="big"><span class="cnt" data-n="76">76</span><small> %</small></div><div class="t">지망 충족률</div><div class="gain">+56.6%p</div></div>
+    <div class="stat"><div class="from">무작위 배정 41.8점</div><div class="big"><span class="cnt" data-n="75.6">75.6</span><small> 점</small></div><div class="t">평균 매칭점수</div><div class="gain">+33.8점</div></div>
+    <div class="stat"><div class="from">221명 전원 배정</div><div class="big"><span class="cnt" data-n="0">0</span><small> 명</small></div><div class="t">미배정 학생</div><div class="gain">병원 정원 100% 준수</div></div>
   </div>
-  <div class="note">가상 명단과 무작위 배정 시뮬레이션(정원은 지킴) 기준입니다. 실제 학과의 배정 결과와 비교한 값이 아닙니다.</div>
+  <div class="note">가상 명단 기준 시뮬레이션 결과이며, 통학시간은 지도 기반 예상값입니다. 실제 학과의 배정 결과와 비교한 값이 아닙니다.</div>
 </div></section>
 
 <section id="service" class="alt"><div class="wrap">
-  <div class="sec-h"><div class="tag">주요 서비스</div><h2>AI기반 간호실습 배치 의사결정 프로그램</h2></div>
+  <div class="sec-h"><div class="tag">주요 기능</div><h2>시스템이 계산하고, 교수자가 결정합니다</h2><p>최적화 알고리즘(헝가리안 알고리즘)이 병원 정원 안에서 학생 전체의 점수 합이 가장 높은 조합을 찾습니다.</p></div>
   <div class="svc">
     <div>
       <h3>조건을 정하고 명단을 올리면, 추천안이 나옵니다</h3>
@@ -2284,7 +2286,7 @@ LANDING_PAGE = """<!DOCTYPE html>
         <li>결과 표 정렬·검색, 엑셀 다운로드</li>
         <li>화면에서 이름·학번 일부 가림</li>
       </ul>
-      <a class="btn" href="/app">서비스 시작하기</a>
+      <a class="btn" href="/app">배정 시스템 열기</a>
     </div>
     <div class="score">
       <b>점수는 이렇게 계산합니다</b>
@@ -2298,7 +2300,7 @@ LANDING_PAGE = """<!DOCTYPE html>
   </div></section>
 
 <section id="start"><div class="wrap">
-  <div class="sec-h"><div class="tag">서비스 시작하기</div><h2>먼저 비중을 바꿔 보세요</h2><p>슬라이더를 움직여 보세요. 통학 거리를 중요하게 보면 가까운 병원이, 희망을 중요하게 보면 희망 병원이 올라옵니다.</p></div>
+  <div class="sec-h"><div class="tag">직접 해보기</div><h2>먼저 비중을 바꿔 보세요</h2><p>슬라이더를 움직여 보세요. 통학 거리를 중요하게 보면 가까운 병원이, 희망을 중요하게 보면 희망 병원이 올라옵니다.</p></div>
   <div class="demo">
     <div>
       <h3>예시 학생 한 명</h3>
@@ -2312,9 +2314,20 @@ LANDING_PAGE = """<!DOCTYPE html>
   <div style="text-align:center;margin-top:28px"><a class="btn" href="/app" style="padding:16px 34px;font-size:17px">배정 시스템 열기</a></div>
 </div></section>
 
-<section id="guide" class="alt"><div class="wrap">
-  <div class="sec-h"><div class="tag">사용법</div><h2>처음 쓰는 분을 위한 안내</h2><p>자세한 화면별 설명은 사용설명서에서, 자주 묻는 내용은 아래에서 확인하세요.</p></div>
-  <div style="text-align:center;margin-bottom:24px">__GUIDE_BTN__</div>
+<section id="steps" class="alt"><div class="wrap">
+  <div class="sec-h"><div class="tag">순서</div><h2>세 단계로 끝납니다</h2><p>조건을 정하고, 명단을 올리고, 추천안을 확인합니다.</p></div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><div class="ico">1</div><h3>조건 설정</h3><p>배정 방식, 교과목, 실습 기간, 거리와 희망의 비중, 병원별 정원을 정합니다.</p></div>
+    <div class="card"><div class="ico">2</div><h3>명단 업로드</h3><p>엑셀이나 CSV 명단을 올립니다. 파일은 서버에 저장하지 않고 처리 후 사라집니다.</p></div>
+    <div class="card"><div class="ico">3</div><h3>추천안 확인</h3><p>병원별 현황, 통학시간 분포, 지망 충족률을 보고 학생별 근거를 확인합니다.</p></div>
+  </div>
+
+  <div style="text-align:center;margin-top:28px"><a class="btn" href="/app">배정 시스템 열기</a></div>
+</div></section>
+
+<section id="guide"><div class="wrap">
+  <div class="sec-h"><div class="tag">사용법</div><h2>처음 쓰는 분을 위한 안내</h2><p>자주 묻는 내용을 모았습니다.</p></div>
+  __GUIDE_BTN__
   <div class="faq">
     <details><summary>학생 명단은 서버에 저장되나요?</summary><p>저장하지 않습니다. 올린 파일은 메모리에서 처리한 뒤 사라지고, 결과는 엑셀로 내려받아 보관합니다.</p></details>
     <details><summary>명단 파일은 어떤 형식이어야 하나요?</summary><p>엑셀(.xlsx) 또는 CSV입니다. 필수 열은 학번, 이름, 성별, GPA, 출생연도이며, 양식 샘플을 내려받아 확인할 수 있습니다.</p></details>
@@ -2325,42 +2338,19 @@ LANDING_PAGE = """<!DOCTYPE html>
   </div>
 </div></section>
 
-<section id="steps"><div class="wrap">
-  <div class="sec-h"><div class="tag">순서</div><h2>세 단계로 끝납니다</h2><p>조건을 정하고, 명단을 올리고, 추천안을 확인합니다.</p></div>
-  <div class="grid g3" style="margin-top:16px">
-    <div class="card"><div class="ico">1</div><h3>조건 설정</h3><p>배정 방식, 교과목, 실습 기간, 거리와 희망의 비중, 병원별 정원을 정합니다.</p></div>
-    <div class="card"><div class="ico">2</div><h3>명단 업로드</h3><p>엑셀이나 CSV 명단을 올립니다. 파일은 서버에 저장하지 않고 처리 후 사라집니다.</p></div>
-    <div class="card"><div class="ico">3</div><h3>추천안 확인</h3><p>병원별 현황, 통학시간 분포, 지망 충족률을 보고 학생별 근거를 확인합니다.</p></div>
-  </div>
-
-  <div style="text-align:center;margin-top:28px"><a class="btn" href="/app">서비스 시작하기</a></div>
-</div></section>
-
-<section id="news" class="alt"><div class="wrap">
-  <div class="sec-h"><div class="tag">소식</div><h2>업데이트</h2></div>
-  <div class="news"><ul>
-    <li><b>__APP_VERSION__</b><span>통학시간 안내 문구를 "지도 기반 예상 소요시간"으로 정리했습니다. (현재 버전)</span></li>
-    <li><b>v12.0</b><span>프로그램 이름을 "AI기반 간호실습 배치 의사결정 프로그램"으로 바꿨습니다.</span></li>
-    <li><b>v11</b><span>소개 페이지를 홈페이지 형태로 개편했습니다.</span></li>
-    <li><b>v10</b><span>학생 상세 화면에 거주지와 병원 위치 지도를 추가하고, 결과 표에 정렬과 페이지 나누기를 넣었습니다.</span></li>
-    <li><b>v10</b><span>화면에서 이름과 학번의 일부를 가리도록 했습니다.</span></li>
-    <li><b>v10</b><span>병원별 정원을 화면에서 직접 입력할 수 있게 했습니다.</span></li>
-  </ul></div>
-</div></section>
-
 <section class="fin"><div class="wrap">
   <div class="final">
     <h2>결정은 교수자가, 근거는 시스템이</h2>
     <p>로켓단은 배정을 대신 결정하지 않습니다. 더 합리적으로 선택할 수 있도록 추천안과 그 이유를 제공합니다.</p>
-    <a class="btn" href="/app">서비스 시작하기</a>
+    <a class="btn" href="/app">배정 시스템 열기</a>
   </div>
 </div></section>
 </main>
 
 <footer><div class="wrap">
-  <div class="links"><a href="/app">서비스 시작하기</a>__GUIDE_FOOT__</div>
-  로켓단 · AI기반 간호실습 배치 의사결정 프로그램 · 캡스톤디자인 작품
-  <div class="keyhint">키보드 숫자 1~9를 누르면 해당 구역으로 이동합니다.</div>
+  <div class="links"><a href="/app">배정 시스템 열기</a>__GUIDE_FOOT__</div>
+  <b style="color:var(--navy)">로켓단</b> · AI기반 간호실습 배치 의사결정 프로그램<br>안산대학교 간호학과 캡스톤디자인 작품 · 팀원 강지우(팀장), 최영락, 정현민 · 지도교수 강민정
+  <div class="keyhint">키보드 숫자 1~8을 누르면 해당 구역으로 이동합니다.</div>
 </div></footer>
 <script>
 (function () {
@@ -2388,7 +2378,7 @@ LANDING_PAGE = """<!DOCTYPE html>
   sl.addEventListener('input', draw); draw();
 
   /* 숫자 키 1~9: 해당 구역으로 이동 */
-  var ORDER = ['intro', 'why', 'compare', 'numbers', 'service', 'start', 'guide', 'steps', 'news'];
+  var ORDER = ['intro', 'why', 'compare', 'numbers', 'service', 'start', 'steps', 'guide'];
   document.addEventListener('keydown', function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
     var t = e.target, tag = t && t.tagName;
@@ -2447,7 +2437,7 @@ def render_landing(request: Request):
     import html as _html
     guide = os.environ.get("GUIDE_URL", "").strip()
     link = f'<a href="{_html.escape(guide, quote=True)}" target="_blank" rel="noopener">사용설명서</a>' if guide.startswith("http") else ""
-    btn = link.replace("<a ", '<a class="btn" ', 1) if link else '<span style="color:var(--muted);font-size:14px">사용설명서는 준비 중입니다.</span>'
+    btn = ('<div style="text-align:center;margin-bottom:24px">' + link.replace("<a ", '<a class="btn" ', 1) + '</div>') if link else ''
     page = LANDING_PAGE.replace("__GUIDE_BTN__", btn).replace("__GUIDE_LINK__", link).replace("__GUIDE_FOOT__", link).replace("__BASE__", _base_url(request)).replace("__APP_VERSION__", APP_VERSION)
     return HTMLResponse(content=page)
 
